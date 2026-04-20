@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FrigProp — Refrigerant Properties</title>
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="app-title">FrigProp</span>
+      <select id="refrigerant-select" disabled>
+        <option value="">— select refrigerant —</option>
+      </select>
+    </div>
+    <div class="header-right">
+      <span id="status-pill" class="status-pill loading">Loading tables…</span>
+    </div>
+  </header>
+
+  <!-- Main two-panel layout -->
+  <main class="app-main">
+
+    <!-- Left panel: refrigerant info -->
+    <aside class="panel panel-info" id="info-panel">
+      <div class="panel-header">REFRIGERANT INFO</div>
+      <div id="info-content" class="info-placeholder">Select a refrigerant to view properties.</div>
+    </aside>
+
+    <!-- Right panel: cycle analysis -->
+    <section class="panel panel-cycle">
+      <div class="panel-header">CYCLE ANALYSIS</div>
+
+      <!-- State inputs -->
+      <div class="cycle-inputs">
+        <table class="input-table">
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>Description</th>
+              <th>Known 1</th>
+              <th>Known 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- State 1 -->
+            <tr id="row-state1">
+              <td class="state-num">1</td>
+              <td class="state-desc">Compressor inlet</td>
+              <td>
+                <label class="input-label">T&nbsp;(°C)
+                  <input type="number" id="T1" step="0.5" placeholder="e.g. −10">
+                </label>
+                <label class="mod-checkbox">
+                  <input type="checkbox" id="sh-inlet"> Superheated
+                </label>
+                <span id="sh-inlet-extra" class="extra-input hidden">
+                  &nbsp;P&nbsp;(kPa)&nbsp;<input type="number" id="P1sh" step="1" placeholder="e.g. 200">
+                </span>
+              </td>
+              <td class="derived-label" id="s1-known2">x = 1 (sat. vapor)</td>
+            </tr>
+            <!-- State 2 -->
+            <tr id="row-state2">
+              <td class="state-num">2</td>
+              <td class="state-desc">Compressor exit</td>
+              <td class="derived-label">P = P<sub>cond</sub></td>
+              <td class="derived-label">s = s<sub>1</sub> (isentropic)</td>
+            </tr>
+            <!-- State 3 -->
+            <tr id="row-state3">
+              <td class="state-num">3</td>
+              <td class="state-desc">Condenser exit</td>
+              <td>
+                <label class="input-label">T&nbsp;(°C)
+                  <input type="number" id="T3" step="0.5" placeholder="e.g. 40">
+                </label>
+                <label class="mod-checkbox">
+                  <input type="checkbox" id="sc-exit"> Subcooled
+                </label>
+                <span id="sc-exit-extra" class="extra-input hidden">
+                  &nbsp;P&nbsp;(kPa)&nbsp;<input type="number" id="P3sc" step="1" placeholder="e.g. 1200">
+                </span>
+              </td>
+              <td class="derived-label" id="s3-known2">x = 0 (sat. liquid)</td>
+            </tr>
+            <!-- State 4 -->
+            <tr id="row-state4">
+              <td class="state-num">4</td>
+              <td class="state-desc">Expansion exit</td>
+              <td class="derived-label">P = P<sub>evap</sub></td>
+              <td class="derived-label">h = h<sub>3</sub> (isenthalpic)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="btn-row">
+          <button id="calc-btn" class="btn-calc" disabled>Calculate Cycle</button>
+        </div>
+      </div>
+
+      <!-- Warnings -->
+      <div id="warnings-box" class="warnings-box hidden"></div>
+
+      <!-- Transcritical notice -->
+      <div id="transcrit-notice" class="transcrit-notice hidden">
+        ⚠ Condensing temperature exceeds critical point — transcritical operation. Results may not represent a standard subcritical cycle.
+      </div>
+
+      <!-- State properties results table -->
+      <div id="results-section" class="results-section hidden">
+        <div class="panel-header">STATE PROPERTIES</div>
+        <table class="results-table" id="results-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>T (°C)</th>
+              <th>P (kPa)</th>
+              <th>h (kJ/kg)</th>
+              <th>s (kJ/kg·K)</th>
+              <th>x</th>
+              <th>ρ (kg/m³)</th>
+            </tr>
+          </thead>
+          <tbody id="results-tbody">
+          </tbody>
+        </table>
+
+        <!-- Performance metrics -->
+        <div class="metrics-grid" id="metrics-grid">
+          <div class="metric">
+            <span class="metric-label">COP<sub>c</sub></span>
+            <span class="metric-value" id="cop-c">—</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">COP<sub>h</sub></span>
+            <span class="metric-value" id="cop-h">—</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Q<sub>evap</sub></span>
+            <span class="metric-value" id="q-evap">—</span>
+            <span class="metric-unit">kJ/kg</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Q<sub>cond</sub></span>
+            <span class="metric-value" id="q-cond">—</span>
+            <span class="metric-unit">kJ/kg</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">W<sub>comp</sub></span>
+            <span class="metric-value" id="w-comp">—</span>
+            <span class="metric-unit">kJ/kg</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Energy balance</span>
+            <span class="metric-value" id="energy-balance">—</span>
+            <span class="metric-unit">kJ/kg</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error output -->
+      <div id="error-box" class="error-box hidden"></div>
+
+    </section>
+  </main>
+
+  <script type="module" src="./assets/js/app.js"></script>
+</body>
+</html>
