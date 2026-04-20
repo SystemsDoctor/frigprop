@@ -20,28 +20,32 @@
     </div>
   </nav>
 
-  <!-- Main two-panel layout -->
+  <!-- Tiled layout -->
   <div class="app-body">
 
-    <!-- LEFT: refrigerant selector + info -->
-    <aside class="panel left-panel">
+    <!-- LEFT COLUMN: two stacked panes, sticky -->
+    <div class="col-left">
 
-      <!-- Persistent card grid -->
-      <div class="panel-header">
-        <span class="panel-title">Select Refrigerant</span>
+      <!-- Pane: refrigerant selector -->
+      <div class="pane">
+        <div class="panel-header">
+          <span class="panel-title">Select Refrigerant</span>
+        </div>
+        <div id="ref-cards" class="refrig-grid"></div>
       </div>
-      <div id="ref-cards" class="refrig-grid"></div>
 
-      <!-- Info section -->
-      <div class="panel-header info-sub-header">
-        <span class="panel-title">Properties</span>
+      <!-- Pane: refrigerant properties -->
+      <div class="pane">
+        <div class="panel-header">
+          <span class="panel-title">Properties</span>
+        </div>
+        <div id="info-content" class="info-placeholder">Select a refrigerant above.</div>
       </div>
-      <div id="info-content" class="info-placeholder">Select a refrigerant above.</div>
 
-    </aside>
+    </div>
 
-    <!-- RIGHT: cycle analysis -->
-    <section class="panel right-panel">
+    <!-- RIGHT: cycle analysis pane -->
+    <div class="pane col-right">
 
       <div class="panel-header">
         <span class="panel-title">VCRC Cycle Analysis</span>
@@ -148,7 +152,7 @@
       <!-- Results -->
       <div id="results-section" class="hidden">
 
-        <div class="panel-header">
+        <div class="panel-header panel-header-sub">
           <span class="panel-title">State Properties</span>
         </div>
 
@@ -169,7 +173,7 @@
           </table>
         </div>
 
-        <div class="panel-header">
+        <div class="panel-header panel-header-sub">
           <span class="panel-title">Performance</span>
         </div>
 
@@ -187,21 +191,21 @@
           <div class="section-divider" style="color:var(--accent3)">Heat Transfer</div>
           <div class="result-row">
             <span class="result-key">Q<sub>evap</sub></span>
-            <span class="result-val result-ok" id="q-evap">— <span class="unit">kJ/kg</span></span>
+            <span class="result-val result-ok" id="q-evap">—</span>
           </div>
           <div class="result-row">
             <span class="result-key">Q<sub>cond</sub></span>
-            <span class="result-val result-ok" id="q-cond">— <span class="unit">kJ/kg</span></span>
+            <span class="result-val result-ok" id="q-cond">—</span>
           </div>
 
-          <div class="section-divider" style="color:var(--accent2)">Work & Balance</div>
+          <div class="section-divider" style="color:var(--accent2)">Work &amp; Balance</div>
           <div class="result-row">
             <span class="result-key">W<sub>comp</sub></span>
-            <span class="result-val" id="w-comp">— <span class="unit">kJ/kg</span></span>
+            <span class="result-val" id="w-comp">—</span>
           </div>
           <div class="result-row">
             <span class="result-key">Energy balance</span>
-            <span class="result-val result-ok" id="energy-balance">— <span class="unit">kJ/kg</span></span>
+            <span class="result-val result-ok" id="energy-balance">—</span>
           </div>
         </div>
       </div>
@@ -209,8 +213,8 @@
       <!-- Error -->
       <div id="error-box" class="alert-box alert-error hidden"></div>
 
-    </section>
-  </div>
+    </div><!-- .pane.col-right -->
+  </div><!-- .app-body -->
 
   <script type="module" src="./assets/js/app.js"></script>
 </body>
