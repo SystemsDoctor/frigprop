@@ -9,7 +9,7 @@ import {
   setStatus, populateRefrigerantSelector, onRefrigerantChange,
   renderInfoPanel, wireInputControls, getInputs,
   enableCalcButton, onCalcClick, showError, clearError,
-  renderResults, showTranscritWarning,
+  renderResults, showTranscritWarning, highlightRefCard,
 } from "./ui.js";
 
 let currentFluidKey = null;
@@ -55,6 +55,7 @@ async function selectFluid(key) {
     const info = await getRefrigerantInfo(key);
     const meta = backend.getFluidMeta(key);
     renderInfoPanel(key, info, meta);
+    highlightRefCard(key, info);
     setStatus("ready", `Ready — ${key}`);
     enableCalcButton(true);
     clearError();

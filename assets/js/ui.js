@@ -11,35 +11,31 @@ const $ = id => document.getElementById(id);
 
 export function setStatus(state, text) {
   const pill = $("status-pill");
-  pill.className = `status-pill ${state}`;
+  pill.className = `nav-badge ${state}`;
   pill.textContent = text;
 }
 
 // ---------------------------------------------------------------------------
-// Refrigerant card picker
+// Refrigerant card grid (persistent — always visible, no toggle)
 // ---------------------------------------------------------------------------
 
 let _onRefrigerantChange = null;
-let _selectedKey = null;
 
 export function populateRefrigerantSelector(keys, allInfo) {
-  const btn    = $("ref-select-btn");
-  const cards  = $("ref-cards");
-
-  cards.innerHTML = "";
+  const grid = $("ref-cards");
+  grid.innerHTML = "";
 
   keys.forEach(key => {
-    const info = allInfo && allInfo[key];
+    const info     = allInfo && allInfo[key];
+    const typeRaw  = info ? info.refrigerant_type : "";
+    const typeSlug = _typeSlug(typeRaw);
+    const gwp      = info ? info.GWP_AR5 : null;
+    const safety   = info ? info.safety_class : "";
+    const bp       = info ? info.normal_boiling_point_C : null;
+
     const card = document.createElement("div");
     card.className = "ref-card";
-    card.setAttribute("role", "option");
     card.dataset.key = key;
-
-    const typeRaw = info ? info.refrigerant_type : "";
-    const typeSlug = _typeSlug(typeRaw);
-    const gwp = info ? info.GWP_AR5 : null;
-    const safety = info ? info.safety_class : "";
-    const bp = info ? info.normal_boiling_point_C : null;
 
     card.innerHTML = `
       <div class="ref-card-name">${info ? info.ashrae_designation : key}</div>
@@ -48,65 +44,32 @@ export function populateRefrigerantSelector(keys, allInfo) {
         ${safety ? `<span class="ref-badge ref-badge-safety">${safety}</span>` : ""}
       </div>
       <div class="ref-card-stats">
-        ${gwp !== null ? `<span>GWP <span class="ref-card-stat-val ${_gwpClass(gwp)}">${gwp === 0 ? "<1" : gwp}</span></span>` : ""}
-        ${bp !== null ? `<span>BP <span class="ref-card-stat-val">${bp}°C</span></span>` : ""}
+        ${gwp !== null ? `<span>GWP <span class="ref-card-stat-val ${_gwpClass(gwp)}">${gwp === 0 ? "&lt;1" : gwp}</span></span>` : ""}
+        ${bp  !== null ? `<span>BP <span class="ref-card-stat-val">${bp}°C</span></span>` : ""}
       </div>
     `;
 
     card.addEventListener("click", () => {
-      _selectCard(key, btn, allInfo && allInfo[key]);
-      _closePicker();
+      _selectCard(key, info);
       if (_onRefrigerantChange) _onRefrigerantChange(key);
     });
 
-    cards.appendChild(card);
+    grid.appendChild(card);
   });
-
-  btn.disabled = false;
 }
 
 export function onRefrigerantChange(handler) {
   _onRefrigerantChange = handler;
-
-  const btn    = $("ref-select-btn");
-  const picker = $("ref-picker");
-
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = !picker.classList.contains("hidden");
-    if (isOpen) {
-      _closePicker();
-    } else {
-      _openPicker();
-    }
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!$("ref-select-wrap").contains(e.target)) _closePicker();
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") _closePicker();
-  });
 }
 
-function _openPicker() {
-  const btn    = $("ref-select-btn");
-  const picker = $("ref-picker");
-  picker.classList.remove("hidden");
-  btn.classList.add("open");
+export function highlightRefCard(key, info) {
+  _selectCard(key, info);
 }
 
-function _closePicker() {
-  const btn    = $("ref-select-btn");
-  const picker = $("ref-picker");
-  picker.classList.add("hidden");
-  btn.classList.remove("open");
-}
-
-function _selectCard(key, btn, info) {
-  _selectedKey = key;
-  $("ref-select-label").textContent = info ? info.ashrae_designation : key;
+function _selectCard(key, info) {
+  // Update nav display
+  const navDisplay = $("nav-ref-display");
+  if (navDisplay) navDisplay.textContent = info ? info.ashrae_designation : key;
 
   // Highlight selected card
   document.querySelectorAll(".ref-card").forEach(c => {
@@ -118,9 +81,9 @@ function _typeSlug(type) {
   if (!type) return "hfc";
   const t = type.toLowerCase();
   if (t.includes("natural")) return "natural";
-  if (t.includes("hfo"))  return "hfo";
-  if (t.includes("hcfc")) return "hcfc";
-  if (t.includes("blend")) return "blend";
+  if (t.includes("hfo"))     return "hfo";
+  if (t.includes("hcfc"))    return "hcfc";
+  if (t.includes("blend"))   return "blend";
   return "hfc";
 }
 
@@ -128,8 +91,8 @@ function _typeLabel(type) {
   if (!type) return "HFC";
   const t = type.toLowerCase();
   if (t.includes("natural")) return "Natural";
-  if (t.includes("hfo"))  return "HFO";
-  if (t.includes("hcfc")) return "HCFC";
+  if (t.includes("hfo"))     return "HFO";
+  if (t.includes("hcfc"))    return "HCFC";
   if (t === "hfc blend" || t.includes("blend")) return "Blend";
   return "HFC";
 }
@@ -154,23 +117,23 @@ export function renderInfoPanel(key, info, meta) {
   const safetyColor = info.safety_class.includes("B") ? "warn" : "";
 
   const rows = [
-    ["Designation",  info.ashrae_designation,  "highlight"],
-    ["Chemical name",info.chemical_name,        ""],
-    ["Formula",      info.formula,              ""],
-    ["Type",         info.refrigerant_type,     ""],
-    ["Safety class", info.safety_class,         safetyColor],
-    ["GWP (AR5)",    info.GWP_AR5 === 0 ? "0 (natural)" : info.GWP_AR5.toString(), gwpColor],
-    ["ODP",          info.ODP === 0 ? "0.00" : info.ODP.toString(), odpColor],
-    ["Normal B.P.",  `${info.normal_boiling_point_C} °C`, ""],
-    ["T_crit",       `${info.T_crit_C} °C`,    ""],
-    ["P_crit",       `${info.P_crit_kPa} kPa`, ""],
-    ["T glide",      info.T_glide_C === 0 ? "0 (azeotrope)" : `${info.T_glide_C} °C`, info.T_glide_C > 1 ? "warn" : ""],
-    ["M.W.",         `${info.molecular_weight} g/mol`, ""],
-    ["Regulatory",   info.regulatory_status,   "warn"],
+    ["Designation",   info.ashrae_designation,  "highlight"],
+    ["Chemical name", info.chemical_name,        ""],
+    ["Formula",       info.formula,              ""],
+    ["Type",          info.refrigerant_type,     ""],
+    ["Safety class",  info.safety_class,         safetyColor],
+    ["GWP (AR5)",     info.GWP_AR5 === 0 ? "0 (natural)" : info.GWP_AR5.toString(), gwpColor],
+    ["ODP",           info.ODP === 0 ? "0.00" : info.ODP.toString(), odpColor],
+    ["Normal B.P.",   `${info.normal_boiling_point_C} °C`, ""],
+    ["T_crit",        `${info.T_crit_C} °C`,    ""],
+    ["P_crit",        `${info.P_crit_kPa} kPa`, ""],
+    ["T glide",       info.T_glide_C === 0 ? "0 (azeotrope)" : `${info.T_glide_C} °C`, info.T_glide_C > 1 ? "warn" : ""],
+    ["M.W.",          `${info.molecular_weight} g/mol`, ""],
+    ["Regulatory",    info.regulatory_status,   "warn"],
   ];
 
   if (info.blend_components) rows.push(["Components",  info.blend_components.join(", "), ""]);
-  if (info.replaces && info.replaces.length)     rows.push(["Replaces",    info.replaces.join(", "), ""]);
+  if (info.replaces && info.replaces.length)       rows.push(["Replaces",    info.replaces.join(", "), ""]);
   if (info.replaced_by && info.replaced_by.length) rows.push(["Replaced by", info.replaced_by.join(", "), "dim"]);
   if (info.typical_applications) rows.push(["Applications", info.typical_applications.join(", "), ""]);
 
@@ -199,25 +162,25 @@ export function renderInfoPanel(key, info, meta) {
 export function wireInputControls() {
   $("sh-inlet").addEventListener("change", function () {
     const extra = $("sh-inlet-extra");
-    const s1k2  = $("s1-known2");
+    const badge = $("badge-s1");
     if (this.checked) {
       extra.classList.remove("hidden");
-      s1k2.innerHTML = `<span class="derived-tag">T + P</span><span class="derived-note">superheated inlet</span>`;
+      if (badge) { badge.className = "state-badge state-superheated"; badge.textContent = "superheated"; }
     } else {
       extra.classList.add("hidden");
-      s1k2.innerHTML = `<span class="derived-tag">x = 1</span><span class="derived-note">sat. vapor</span>`;
+      if (badge) { badge.className = "state-badge state-saturated"; badge.textContent = "sat. vapor"; }
     }
   });
 
   $("sc-exit").addEventListener("change", function () {
     const extra = $("sc-exit-extra");
-    const s3k2  = $("s3-known2");
+    const badge = $("badge-s3");
     if (this.checked) {
       extra.classList.remove("hidden");
-      s3k2.innerHTML = `<span class="derived-tag">T + P</span><span class="derived-note">subcooled exit</span>`;
+      if (badge) { badge.className = "state-badge state-subcooled"; badge.textContent = "subcooled"; }
     } else {
       extra.classList.add("hidden");
-      s3k2.innerHTML = `<span class="derived-tag">x = 0</span><span class="derived-note">sat. liquid</span>`;
+      if (badge) { badge.className = "state-badge state-subcooled"; badge.textContent = "sat. liquid"; }
     }
   });
 }
@@ -293,10 +256,13 @@ export function renderResults(states, metrics, warnings) {
     const phaseClass = s.x === null
       ? (i === 0 || i === 1 ? "val-vapor" : "val-liquid")
       : "";
+    const isDerived  = i === 1 || i === 3;
+    const badgeClass = isDerived
+      ? "state-badge state-badge-derived"
+      : "state-badge";
     const tr = document.createElement("tr");
-    const badgeClass = i === 1 || i === 3 ? "state-badge-derived" : "";
     tr.innerHTML = `
-      <td><span class="state-badge ${badgeClass}">${i + 1}</span></td>
+      <td><span class="${badgeClass}">${i + 1}</span></td>
       <td class="${phaseClass}">${fmt(s.T_C, 2)}</td>
       <td>${fmt(s.P_kPa, 2)}</td>
       <td>${fmt(s.h, 2)}</td>
@@ -307,12 +273,12 @@ export function renderResults(states, metrics, warnings) {
     tbody.appendChild(tr);
   });
 
-  $("cop-c").textContent         = fmt(metrics.COP_c, 3);
-  $("cop-h").textContent         = fmt(metrics.COP_h, 3);
-  $("q-evap").textContent        = fmt(metrics.Q_evap, 2);
-  $("q-cond").textContent        = fmt(metrics.Q_cond, 2);
-  $("w-comp").textContent        = fmt(metrics.W_comp, 2);
-  $("energy-balance").textContent = fmt(metrics.energy_balance_residual, 4);
+  $("cop-c").textContent = fmt(metrics.COP_c, 3);
+  $("cop-h").textContent = fmt(metrics.COP_h, 3);
+  $("q-evap").innerHTML  = `${fmt(metrics.Q_evap, 2)} <span class="unit">kJ/kg</span>`;
+  $("q-cond").innerHTML  = `${fmt(metrics.Q_cond, 2)} <span class="unit">kJ/kg</span>`;
+  $("w-comp").innerHTML  = `${fmt(metrics.W_comp, 2)} <span class="unit">kJ/kg</span>`;
+  $("energy-balance").innerHTML = `${fmt(metrics.energy_balance_residual, 4)} <span class="unit">kJ/kg</span>`;
 
   $("results-section").classList.remove("hidden");
 }

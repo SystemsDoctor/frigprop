@@ -4,224 +4,213 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FrigProp — Refrigerant Properties</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./assets/css/style.css">
 </head>
 <body>
-  <!-- Header -->
-  <header class="app-header">
-    <div class="header-left">
-      <div class="app-brand">
-        <span class="app-title">FrigProp</span>
-        <span class="app-subtitle">Refrigerant Properties</span>
-      </div>
-      <div class="divider-v"></div>
-      <div class="ref-select-wrap" id="ref-select-wrap">
-        <button id="ref-select-btn" class="ref-select-btn" disabled>
-          <span class="ref-select-icon">⬡</span>
-          <span id="ref-select-label">Select refrigerant</span>
-          <span class="ref-select-arrow">▾</span>
-        </button>
-        <div id="ref-picker" class="ref-picker hidden" role="listbox" aria-label="Select refrigerant">
-          <div class="ref-picker-header">Select Refrigerant</div>
-          <div id="ref-cards" class="ref-cards"></div>
-        </div>
-      </div>
+
+  <!-- Nav -->
+  <nav>
+    <div class="logo">Frig<span>Prop</span></div>
+    <div id="nav-ref-display" class="nav-ref-display"></div>
+    <div class="nav-right">
+      <span id="status-pill" class="nav-badge loading">Initialising…</span>
     </div>
-    <div class="header-right">
-      <span id="status-pill" class="status-pill loading">Loading tables…</span>
-    </div>
-  </header>
+  </nav>
 
   <!-- Main two-panel layout -->
-  <main class="app-main">
+  <div class="app-body">
 
-    <!-- Left panel: refrigerant info -->
-    <aside class="panel panel-info" id="info-panel">
+    <!-- LEFT: refrigerant selector + info -->
+    <aside class="panel left-panel">
+
+      <!-- Persistent card grid -->
       <div class="panel-header">
-        <span class="panel-header-icon">◈</span> Refrigerant Info
+        <span class="panel-title">Select Refrigerant</span>
       </div>
-      <div id="info-content" class="info-placeholder">Select a refrigerant to view properties.</div>
+      <div id="ref-cards" class="refrig-grid"></div>
+
+      <!-- Info section -->
+      <div class="panel-header info-sub-header">
+        <span class="panel-title">Properties</span>
+      </div>
+      <div id="info-content" class="info-placeholder">Select a refrigerant above.</div>
+
     </aside>
 
-    <!-- Right panel: cycle analysis -->
-    <section class="panel panel-cycle">
+    <!-- RIGHT: cycle analysis -->
+    <section class="panel right-panel">
+
       <div class="panel-header">
-        <span class="panel-header-icon">⟳</span> Cycle Analysis
+        <span class="panel-title">VCRC Cycle Analysis</span>
       </div>
 
       <!-- State inputs -->
-      <div class="cycle-inputs">
-        <table class="input-table">
-          <thead>
-            <tr>
-              <th class="col-state">State</th>
-              <th class="col-desc">Description</th>
-              <th class="col-known">Known 1</th>
-              <th class="col-known">Known 2</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- State 1 -->
-            <tr id="row-state1" class="state-row state-row-input">
-              <td class="state-num"><span class="state-badge">1</span></td>
-              <td class="state-desc">Compressor inlet</td>
-              <td class="state-inputs-cell">
-                <div class="input-group">
-                  <label class="input-label">
-                    <span class="input-unit">T</span>
-                    <input type="number" id="T1" step="0.5" placeholder="e.g. −10">
-                    <span class="input-unit-suffix">°C</span>
-                  </label>
-                  <label class="mod-checkbox">
-                    <input type="checkbox" id="sh-inlet">
-                    <span>Superheated</span>
-                  </label>
-                  <span id="sh-inlet-extra" class="extra-input hidden">
-                    <label class="input-label">
-                      <span class="input-unit">P</span>
-                      <input type="number" id="P1sh" step="1" placeholder="e.g. 200">
-                      <span class="input-unit-suffix">kPa</span>
-                    </label>
-                  </span>
-                </div>
-              </td>
-              <td class="derived-cell" id="s1-known2">
-                <span class="derived-tag">x = 1</span>
-                <span class="derived-note">sat. vapor</span>
-              </td>
-            </tr>
-            <!-- State 2 -->
-            <tr id="row-state2" class="state-row state-row-derived">
-              <td class="state-num"><span class="state-badge state-badge-derived">2</span></td>
-              <td class="state-desc">Compressor exit</td>
-              <td class="derived-cell">
-                <span class="derived-tag">P = P<sub>cond</sub></span>
-              </td>
-              <td class="derived-cell">
-                <span class="derived-tag">s = s<sub>1</sub></span>
-                <span class="derived-note">isentropic</span>
-              </td>
-            </tr>
-            <!-- State 3 -->
-            <tr id="row-state3" class="state-row state-row-input">
-              <td class="state-num"><span class="state-badge">3</span></td>
-              <td class="state-desc">Condenser exit</td>
-              <td class="state-inputs-cell">
-                <div class="input-group">
-                  <label class="input-label">
-                    <span class="input-unit">T</span>
-                    <input type="number" id="T3" step="0.5" placeholder="e.g. 40">
-                    <span class="input-unit-suffix">°C</span>
-                  </label>
-                  <label class="mod-checkbox">
-                    <input type="checkbox" id="sc-exit">
-                    <span>Subcooled</span>
-                  </label>
-                  <span id="sc-exit-extra" class="extra-input hidden">
-                    <label class="input-label">
-                      <span class="input-unit">P</span>
-                      <input type="number" id="P3sc" step="1" placeholder="e.g. 1200">
-                      <span class="input-unit-suffix">kPa</span>
-                    </label>
-                  </span>
-                </div>
-              </td>
-              <td class="derived-cell" id="s3-known2">
-                <span class="derived-tag">x = 0</span>
-                <span class="derived-note">sat. liquid</span>
-              </td>
-            </tr>
-            <!-- State 4 -->
-            <tr id="row-state4" class="state-row state-row-derived">
-              <td class="state-num"><span class="state-badge state-badge-derived">4</span></td>
-              <td class="state-desc">Expansion exit</td>
-              <td class="derived-cell">
-                <span class="derived-tag">P = P<sub>evap</sub></span>
-              </td>
-              <td class="derived-cell">
-                <span class="derived-tag">h = h<sub>3</sub></span>
-                <span class="derived-note">isenthalpic</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="calc-body">
 
-        <div class="btn-row">
-          <button id="calc-btn" class="btn-calc" disabled>
-            <span class="btn-icon">▶</span> Calculate Cycle
-          </button>
+        <!-- State 1 -->
+        <div class="cycle-section">
+          <div class="cycle-point-header">
+            <span class="cycle-point-num active">1</span>
+            <span class="cycle-point-title">Compressor Inlet</span>
+            <span id="badge-s1" class="state-badge state-saturated">sat. vapor</span>
+          </div>
+          <div class="form-row">
+            <label for="T1">Evaporator Temperature</label>
+            <div class="input-group">
+              <input type="number" id="T1" step="0.5" placeholder="e.g. −10">
+              <span class="input-unit">°C</span>
+            </div>
+          </div>
+          <label class="mod-checkbox">
+            <input type="checkbox" id="sh-inlet">
+            <span>Superheated inlet</span>
+          </label>
+          <div id="sh-inlet-extra" class="extra-fields hidden">
+            <div class="form-row" style="margin-top:10px">
+              <label for="P1sh">Inlet Pressure</label>
+              <div class="input-group">
+                <input type="number" id="P1sh" step="1" placeholder="e.g. 200">
+                <span class="input-unit">kPa</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- State 2 (derived) -->
+        <div class="cycle-section cycle-section-derived">
+          <div class="cycle-point-header">
+            <span class="cycle-point-num derived">2</span>
+            <span class="cycle-point-title">Compressor Exit</span>
+            <span class="state-badge state-superheated">derived</span>
+          </div>
+          <div class="derived-row">
+            <span class="derived-item">P = P<sub>cond</sub></span>
+            <span class="derived-sep">·</span>
+            <span class="derived-item">s = s<sub>1</sub><span class="derived-note">(isentropic)</span></span>
+          </div>
+        </div>
+
+        <!-- State 3 -->
+        <div class="cycle-section">
+          <div class="cycle-point-header">
+            <span class="cycle-point-num active">3</span>
+            <span class="cycle-point-title">Condenser Exit</span>
+            <span id="badge-s3" class="state-badge state-subcooled">sat. liquid</span>
+          </div>
+          <div class="form-row">
+            <label for="T3">Condensing Temperature</label>
+            <div class="input-group">
+              <input type="number" id="T3" step="0.5" placeholder="e.g. 40">
+              <span class="input-unit">°C</span>
+            </div>
+          </div>
+          <label class="mod-checkbox">
+            <input type="checkbox" id="sc-exit">
+            <span>Subcooled exit</span>
+          </label>
+          <div id="sc-exit-extra" class="extra-fields hidden">
+            <div class="form-row" style="margin-top:10px">
+              <label for="P3sc">Condenser Pressure</label>
+              <div class="input-group">
+                <input type="number" id="P3sc" step="1" placeholder="e.g. 1200">
+                <span class="input-unit">kPa</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 4 (derived) -->
+        <div class="cycle-section cycle-section-derived">
+          <div class="cycle-point-header">
+            <span class="cycle-point-num derived">4</span>
+            <span class="cycle-point-title">Expansion Exit</span>
+            <span class="state-badge state-flash">derived</span>
+          </div>
+          <div class="derived-row">
+            <span class="derived-item">P = P<sub>evap</sub></span>
+            <span class="derived-sep">·</span>
+            <span class="derived-item">h = h<sub>3</sub><span class="derived-note">(isenthalpic)</span></span>
+          </div>
+        </div>
+
+        <button id="calc-btn" class="calc-btn" disabled>Calculate Cycle</button>
       </div>
 
-      <!-- Warnings -->
-      <div id="warnings-box" class="warnings-box hidden"></div>
-
-      <!-- Transcritical notice -->
-      <div id="transcrit-notice" class="transcrit-notice hidden">
-        ⚠ Condensing temperature exceeds critical point — transcritical operation. Results may not represent a standard subcritical cycle.
+      <!-- Warnings & notices -->
+      <div id="warnings-box" class="alert-box alert-warn hidden"></div>
+      <div id="transcrit-notice" class="alert-box alert-transcrit hidden">
+        ⚠ Condensing temperature exceeds critical point — transcritical operation.
       </div>
 
-      <!-- State properties results table -->
-      <div id="results-section" class="results-section hidden">
+      <!-- Results -->
+      <div id="results-section" class="hidden">
+
         <div class="panel-header">
-          <span class="panel-header-icon">≡</span> State Properties
+          <span class="panel-title">State Properties</span>
         </div>
-        <table class="results-table" id="results-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>T <span class="th-unit">°C</span></th>
-              <th>P <span class="th-unit">kPa</span></th>
-              <th>h <span class="th-unit">kJ/kg</span></th>
-              <th>s <span class="th-unit">kJ/kg·K</span></th>
-              <th>x</th>
-              <th>ρ <span class="th-unit">kg/m³</span></th>
-            </tr>
-          </thead>
-          <tbody id="results-tbody">
-          </tbody>
-        </table>
 
-        <!-- Performance metrics -->
-        <div class="metrics-grid" id="metrics-grid">
-          <div class="metric metric-cop">
-            <span class="metric-label">COP<sub>c</sub></span>
-            <span class="metric-value" id="cop-c">—</span>
-            <span class="metric-unit">cooling</span>
+        <div class="table-wrap">
+          <table class="results-table" id="results-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>T <span class="th-unit">°C</span></th>
+                <th>P <span class="th-unit">kPa</span></th>
+                <th>h <span class="th-unit">kJ/kg</span></th>
+                <th>s <span class="th-unit">kJ/kg·K</span></th>
+                <th>x</th>
+                <th>ρ <span class="th-unit">kg/m³</span></th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-header">
+          <span class="panel-title">Performance</span>
+        </div>
+
+        <div class="results calc-body">
+          <div class="section-divider" style="color:var(--accent)">Coefficient of Performance</div>
+          <div class="result-row">
+            <span class="result-key">COP<sub>c</sub> — Cooling</span>
+            <span class="result-val result-highlight" id="cop-c">—</span>
           </div>
-          <div class="metric metric-cop">
-            <span class="metric-label">COP<sub>h</sub></span>
-            <span class="metric-value" id="cop-h">—</span>
-            <span class="metric-unit">heating</span>
+          <div class="result-row">
+            <span class="result-key">COP<sub>h</sub> — Heating</span>
+            <span class="result-val result-highlight" id="cop-h">—</span>
           </div>
-          <div class="metric">
-            <span class="metric-label">Q<sub>evap</sub></span>
-            <span class="metric-value" id="q-evap">—</span>
-            <span class="metric-unit">kJ/kg</span>
+
+          <div class="section-divider" style="color:var(--accent3)">Heat Transfer</div>
+          <div class="result-row">
+            <span class="result-key">Q<sub>evap</sub></span>
+            <span class="result-val result-ok" id="q-evap">— <span class="unit">kJ/kg</span></span>
           </div>
-          <div class="metric">
-            <span class="metric-label">Q<sub>cond</sub></span>
-            <span class="metric-value" id="q-cond">—</span>
-            <span class="metric-unit">kJ/kg</span>
+          <div class="result-row">
+            <span class="result-key">Q<sub>cond</sub></span>
+            <span class="result-val result-ok" id="q-cond">— <span class="unit">kJ/kg</span></span>
           </div>
-          <div class="metric">
-            <span class="metric-label">W<sub>comp</sub></span>
-            <span class="metric-value" id="w-comp">—</span>
-            <span class="metric-unit">kJ/kg</span>
+
+          <div class="section-divider" style="color:var(--accent2)">Work & Balance</div>
+          <div class="result-row">
+            <span class="result-key">W<sub>comp</sub></span>
+            <span class="result-val" id="w-comp">— <span class="unit">kJ/kg</span></span>
           </div>
-          <div class="metric metric-balance">
-            <span class="metric-label">Energy balance</span>
-            <span class="metric-value" id="energy-balance">—</span>
-            <span class="metric-unit">kJ/kg residual</span>
+          <div class="result-row">
+            <span class="result-key">Energy balance</span>
+            <span class="result-val result-ok" id="energy-balance">— <span class="unit">kJ/kg</span></span>
           </div>
         </div>
       </div>
 
-      <!-- Error output -->
-      <div id="error-box" class="error-box hidden"></div>
+      <!-- Error -->
+      <div id="error-box" class="alert-box alert-error hidden"></div>
 
     </section>
-  </main>
+  </div>
 
   <script type="module" src="./assets/js/app.js"></script>
 </body>
