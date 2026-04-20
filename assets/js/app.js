@@ -22,11 +22,13 @@ async function init() {
     await backend.init("R134a");  // loads manifest + R134a tables as default
 
     const keys = await getRefrigerantList();
-    populateRefrigerantSelector(keys);
+    // Pre-fetch all metadata so cards render with type/GWP badges immediately
+    const allInfo = {};
+    await Promise.all(keys.map(async k => { allInfo[k] = await getRefrigerantInfo(k); }));
+    populateRefrigerantSelector(keys, allInfo);
     setStatus("ready", "Ready");
 
     // Default to R134a
-    document.getElementById("refrigerant-select").value = "R134a";
     await selectFluid("R134a");
 
   } catch (err) {
@@ -35,7 +37,7 @@ async function init() {
     return;
   }
 
-  onRefrigerantChange(async (key) => {
+  onRefrigerantChange(async key => {
     if (!key) return;
     await selectFluid(key);
   });

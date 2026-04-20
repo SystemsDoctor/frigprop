@@ -10,10 +10,22 @@
   <!-- Header -->
   <header class="app-header">
     <div class="header-left">
-      <span class="app-title">FrigProp</span>
-      <select id="refrigerant-select" disabled>
-        <option value="">— select refrigerant —</option>
-      </select>
+      <div class="app-brand">
+        <span class="app-title">FrigProp</span>
+        <span class="app-subtitle">Refrigerant Properties</span>
+      </div>
+      <div class="divider-v"></div>
+      <div class="ref-select-wrap" id="ref-select-wrap">
+        <button id="ref-select-btn" class="ref-select-btn" disabled>
+          <span class="ref-select-icon">⬡</span>
+          <span id="ref-select-label">Select refrigerant</span>
+          <span class="ref-select-arrow">▾</span>
+        </button>
+        <div id="ref-picker" class="ref-picker hidden" role="listbox" aria-label="Select refrigerant">
+          <div class="ref-picker-header">Select Refrigerant</div>
+          <div id="ref-cards" class="ref-cards"></div>
+        </div>
+      </div>
     </div>
     <div class="header-right">
       <span id="status-pill" class="status-pill loading">Loading tables…</span>
@@ -25,79 +37,119 @@
 
     <!-- Left panel: refrigerant info -->
     <aside class="panel panel-info" id="info-panel">
-      <div class="panel-header">REFRIGERANT INFO</div>
+      <div class="panel-header">
+        <span class="panel-header-icon">◈</span> Refrigerant Info
+      </div>
       <div id="info-content" class="info-placeholder">Select a refrigerant to view properties.</div>
     </aside>
 
     <!-- Right panel: cycle analysis -->
     <section class="panel panel-cycle">
-      <div class="panel-header">CYCLE ANALYSIS</div>
+      <div class="panel-header">
+        <span class="panel-header-icon">⟳</span> Cycle Analysis
+      </div>
 
       <!-- State inputs -->
       <div class="cycle-inputs">
         <table class="input-table">
           <thead>
             <tr>
-              <th>State</th>
-              <th>Description</th>
-              <th>Known 1</th>
-              <th>Known 2</th>
+              <th class="col-state">State</th>
+              <th class="col-desc">Description</th>
+              <th class="col-known">Known 1</th>
+              <th class="col-known">Known 2</th>
             </tr>
           </thead>
           <tbody>
             <!-- State 1 -->
-            <tr id="row-state1">
-              <td class="state-num">1</td>
+            <tr id="row-state1" class="state-row state-row-input">
+              <td class="state-num"><span class="state-badge">1</span></td>
               <td class="state-desc">Compressor inlet</td>
-              <td>
-                <label class="input-label">T&nbsp;(°C)
-                  <input type="number" id="T1" step="0.5" placeholder="e.g. −10">
-                </label>
-                <label class="mod-checkbox">
-                  <input type="checkbox" id="sh-inlet"> Superheated
-                </label>
-                <span id="sh-inlet-extra" class="extra-input hidden">
-                  &nbsp;P&nbsp;(kPa)&nbsp;<input type="number" id="P1sh" step="1" placeholder="e.g. 200">
-                </span>
+              <td class="state-inputs-cell">
+                <div class="input-group">
+                  <label class="input-label">
+                    <span class="input-unit">T</span>
+                    <input type="number" id="T1" step="0.5" placeholder="e.g. −10">
+                    <span class="input-unit-suffix">°C</span>
+                  </label>
+                  <label class="mod-checkbox">
+                    <input type="checkbox" id="sh-inlet">
+                    <span>Superheated</span>
+                  </label>
+                  <span id="sh-inlet-extra" class="extra-input hidden">
+                    <label class="input-label">
+                      <span class="input-unit">P</span>
+                      <input type="number" id="P1sh" step="1" placeholder="e.g. 200">
+                      <span class="input-unit-suffix">kPa</span>
+                    </label>
+                  </span>
+                </div>
               </td>
-              <td class="derived-label" id="s1-known2">x = 1 (sat. vapor)</td>
+              <td class="derived-cell" id="s1-known2">
+                <span class="derived-tag">x = 1</span>
+                <span class="derived-note">sat. vapor</span>
+              </td>
             </tr>
             <!-- State 2 -->
-            <tr id="row-state2">
-              <td class="state-num">2</td>
+            <tr id="row-state2" class="state-row state-row-derived">
+              <td class="state-num"><span class="state-badge state-badge-derived">2</span></td>
               <td class="state-desc">Compressor exit</td>
-              <td class="derived-label">P = P<sub>cond</sub></td>
-              <td class="derived-label">s = s<sub>1</sub> (isentropic)</td>
+              <td class="derived-cell">
+                <span class="derived-tag">P = P<sub>cond</sub></span>
+              </td>
+              <td class="derived-cell">
+                <span class="derived-tag">s = s<sub>1</sub></span>
+                <span class="derived-note">isentropic</span>
+              </td>
             </tr>
             <!-- State 3 -->
-            <tr id="row-state3">
-              <td class="state-num">3</td>
+            <tr id="row-state3" class="state-row state-row-input">
+              <td class="state-num"><span class="state-badge">3</span></td>
               <td class="state-desc">Condenser exit</td>
-              <td>
-                <label class="input-label">T&nbsp;(°C)
-                  <input type="number" id="T3" step="0.5" placeholder="e.g. 40">
-                </label>
-                <label class="mod-checkbox">
-                  <input type="checkbox" id="sc-exit"> Subcooled
-                </label>
-                <span id="sc-exit-extra" class="extra-input hidden">
-                  &nbsp;P&nbsp;(kPa)&nbsp;<input type="number" id="P3sc" step="1" placeholder="e.g. 1200">
-                </span>
+              <td class="state-inputs-cell">
+                <div class="input-group">
+                  <label class="input-label">
+                    <span class="input-unit">T</span>
+                    <input type="number" id="T3" step="0.5" placeholder="e.g. 40">
+                    <span class="input-unit-suffix">°C</span>
+                  </label>
+                  <label class="mod-checkbox">
+                    <input type="checkbox" id="sc-exit">
+                    <span>Subcooled</span>
+                  </label>
+                  <span id="sc-exit-extra" class="extra-input hidden">
+                    <label class="input-label">
+                      <span class="input-unit">P</span>
+                      <input type="number" id="P3sc" step="1" placeholder="e.g. 1200">
+                      <span class="input-unit-suffix">kPa</span>
+                    </label>
+                  </span>
+                </div>
               </td>
-              <td class="derived-label" id="s3-known2">x = 0 (sat. liquid)</td>
+              <td class="derived-cell" id="s3-known2">
+                <span class="derived-tag">x = 0</span>
+                <span class="derived-note">sat. liquid</span>
+              </td>
             </tr>
             <!-- State 4 -->
-            <tr id="row-state4">
-              <td class="state-num">4</td>
+            <tr id="row-state4" class="state-row state-row-derived">
+              <td class="state-num"><span class="state-badge state-badge-derived">4</span></td>
               <td class="state-desc">Expansion exit</td>
-              <td class="derived-label">P = P<sub>evap</sub></td>
-              <td class="derived-label">h = h<sub>3</sub> (isenthalpic)</td>
+              <td class="derived-cell">
+                <span class="derived-tag">P = P<sub>evap</sub></span>
+              </td>
+              <td class="derived-cell">
+                <span class="derived-tag">h = h<sub>3</sub></span>
+                <span class="derived-note">isenthalpic</span>
+              </td>
             </tr>
           </tbody>
         </table>
 
         <div class="btn-row">
-          <button id="calc-btn" class="btn-calc" disabled>Calculate Cycle</button>
+          <button id="calc-btn" class="btn-calc" disabled>
+            <span class="btn-icon">▶</span> Calculate Cycle
+          </button>
         </div>
       </div>
 
@@ -111,17 +163,19 @@
 
       <!-- State properties results table -->
       <div id="results-section" class="results-section hidden">
-        <div class="panel-header">STATE PROPERTIES</div>
+        <div class="panel-header">
+          <span class="panel-header-icon">≡</span> State Properties
+        </div>
         <table class="results-table" id="results-table">
           <thead>
             <tr>
               <th>#</th>
-              <th>T (°C)</th>
-              <th>P (kPa)</th>
-              <th>h (kJ/kg)</th>
-              <th>s (kJ/kg·K)</th>
+              <th>T <span class="th-unit">°C</span></th>
+              <th>P <span class="th-unit">kPa</span></th>
+              <th>h <span class="th-unit">kJ/kg</span></th>
+              <th>s <span class="th-unit">kJ/kg·K</span></th>
               <th>x</th>
-              <th>ρ (kg/m³)</th>
+              <th>ρ <span class="th-unit">kg/m³</span></th>
             </tr>
           </thead>
           <tbody id="results-tbody">
@@ -130,13 +184,15 @@
 
         <!-- Performance metrics -->
         <div class="metrics-grid" id="metrics-grid">
-          <div class="metric">
+          <div class="metric metric-cop">
             <span class="metric-label">COP<sub>c</sub></span>
             <span class="metric-value" id="cop-c">—</span>
+            <span class="metric-unit">cooling</span>
           </div>
-          <div class="metric">
+          <div class="metric metric-cop">
             <span class="metric-label">COP<sub>h</sub></span>
             <span class="metric-value" id="cop-h">—</span>
+            <span class="metric-unit">heating</span>
           </div>
           <div class="metric">
             <span class="metric-label">Q<sub>evap</sub></span>
@@ -153,10 +209,10 @@
             <span class="metric-value" id="w-comp">—</span>
             <span class="metric-unit">kJ/kg</span>
           </div>
-          <div class="metric">
+          <div class="metric metric-balance">
             <span class="metric-label">Energy balance</span>
             <span class="metric-value" id="energy-balance">—</span>
-            <span class="metric-unit">kJ/kg</span>
+            <span class="metric-unit">kJ/kg residual</span>
           </div>
         </div>
       </div>
