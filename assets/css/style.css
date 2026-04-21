@@ -739,9 +739,23 @@ nav {
   font-size: 10px;
   color: var(--accent);
   letter-spacing: 0.06em;
-  margin-left: auto;
   opacity: 0.75;
 }
+
+.chart-btn {
+  margin-left: auto;
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 9px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: background 0.15s, border-color 0.15s;
+}
+.chart-btn:hover { background: rgba(0,212,255,0.16); border-color: var(--accent); }
 
 .chart-wrap {
   position: relative;
