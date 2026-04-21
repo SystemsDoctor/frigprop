@@ -11,11 +11,13 @@ import {
   enableCalcButton, onCalcClick, showError, clearError,
   renderResults, showTranscritWarning, highlightRefCard,
 } from "./ui.js";
+import { initTsChart, updateTsChart, clearCycleOverlay } from "./chart.js";
 
 let currentFluidKey = null;
 
 async function init() {
   wireInputControls();
+  initTsChart();
 
   try {
     // Pre-load manifest (no fluid yet)
@@ -64,6 +66,11 @@ async function selectFluid(key) {
     document.getElementById("warnings-box").classList.add("hidden");
     document.getElementById("transcrit-notice").classList.add("hidden");
     document.getElementById("error-box").classList.add("hidden");
+    // Update T-s diagram with saturation dome for new fluid
+    const satRows = backend.getSatRows(key);
+    const fluidLabel = document.getElementById("ts-fluid-label");
+    if (fluidLabel) fluidLabel.textContent = info ? info.ashrae_designation : key;
+    if (satRows) updateTsChart(satRows, null);
   } catch (err) {
     setStatus("error", "Load failed");
     showError(`Failed to load ${key}: ${err.message}`);
@@ -108,6 +115,9 @@ async function handleCalc() {
     showTranscritWarning(transcrit);
 
     renderResults(states, metrics, warnings);
+    // Overlay cycle on T-s diagram
+    const satRows = backend.getSatRows(currentFluidKey);
+    if (satRows) updateTsChart(satRows, states);
     setStatus("ready", `Ready — ${currentFluidKey}`);
   } catch (err) {
     setStatus("ready", `Ready — ${currentFluidKey}`);

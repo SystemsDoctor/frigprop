@@ -44,8 +44,11 @@
 
     </div>
 
-    <!-- RIGHT: cycle analysis pane -->
-    <div class="pane col-right">
+    <!-- RIGHT COLUMN: cycle analysis + T-s diagram -->
+    <div class="col-right">
+
+    <!-- Pane: cycle analysis -->
+    <div class="pane">
 
       <div class="panel-header">
         <span class="panel-title">VCRC Cycle Analysis</span>
@@ -213,9 +216,23 @@
       <!-- Error -->
       <div id="error-box" class="alert-box alert-error hidden"></div>
 
-    </div><!-- .pane.col-right -->
+    </div><!-- .pane (cycle analysis) -->
+
+    <!-- Pane: T-s diagram -->
+    <div class="pane pane-chart">
+      <div class="panel-header">
+        <span class="panel-title">T-s Diagram</span>
+        <span id="ts-fluid-label" class="chart-fluid-label"></span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="ts-chart"></canvas>
+      </div>
+    </div>
+
+    </div><!-- .col-right -->
   </div><!-- .app-body -->
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script type="module" src="./assets/js/app.js"></script>
 </body>
 </html>

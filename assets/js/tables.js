@@ -51,6 +51,12 @@ export default {
   getFluidMeta(fluidKey) {
     return _manifest && _manifest.fluids[fluidKey];
   },
+
+  getSatRows(fluidKey) {
+    const key = fluidKey || _currentFluid;
+    if (!key || !_cache.has(key)) return null;
+    return _cache.get(key).sat.rows;
+  },
 };
 
 // ---------------------------------------------------------------------------
