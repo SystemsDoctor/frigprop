@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FrigProp — Refrigerant Properties</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="logo">Frig<span>Prop</span></div>
+    <div id="nav-ref-display" class="nav-ref-display"></div>
+    <div class="nav-right">
+      <span id="status-pill" class="nav-badge loading">Initialising…</span>
+    </div>
+  </nav>
+
+  <!-- Tiled layout -->
+  <div class="app-body">
+
+    <!-- LEFT COLUMN: two stacked panes, sticky -->
+    <div class="col-left">
+
+      <!-- Pane: refrigerant selector -->
+      <div class="pane">
+        <div class="panel-header">
+          <span class="panel-title">Select Refrigerant</span>
+        </div>
+        <div id="ref-cards" class="refrig-grid"></div>
+      </div>
+
+      <!-- Pane: refrigerant properties -->
+      <div class="pane">
+        <div class="panel-header">
+          <span class="panel-title">Properties</span>
+        </div>
+        <div id="info-content" class="info-placeholder">Select a refrigerant above.</div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: cycle analysis + T-s diagram -->
+    <div class="col-right">
+
+    <!-- Pane: cycle analysis -->
+    <div class="pane">
+
+      <div class="panel-header">
+        <span class="panel-title">VCRC Cycle Analysis</span>
+      </div>
+
+      <!-- State inputs -->
+      <div class="calc-body">
+
+        <!-- State 1 -->
+        <div class="cycle-section">
+          <div class="cycle-point-header">
+            <span class="cycle-point-num active">1</span>
+            <span class="cycle-point-title">Compressor Inlet</span>
+            <span id="badge-s1" class="state-badge state-saturated">sat. vapor</span>
+          </div>
+          <div class="form-row">
+            <label for="T1">Evaporator Temperature</label>
+            <div class="input-group">
+              <input type="number" id="T1" step="0.5" placeholder="e.g. −10">
+              <span class="input-unit">°C</span>
+            </div>
+          </div>
+          <label class="mod-checkbox">
+            <input type="checkbox" id="sh-inlet">
+            <span>Superheated inlet</span>
+          </label>
+          <div id="sh-inlet-extra" class="extra-fields hidden">
+            <div class="form-row" style="margin-top:10px">
+              <label for="P1sh">Inlet Pressure</label>
+              <div class="input-group">
+                <input type="number" id="P1sh" step="1" placeholder="e.g. 200">
+                <span class="input-unit">kPa</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 2 (derived) -->
+        <div class="cycle-section cycle-section-derived">
+          <div class="cycle-point-header">
+            <span class="cycle-point-num derived">2</span>
+            <span class="cycle-point-title">Compressor Exit</span>
+            <span class="state-badge state-superheated">derived</span>
+          </div>
+          <div class="derived-row">
+            <span class="derived-item">P = P<sub>cond</sub></span>
+            <span class="derived-sep">·</span>
+            <span class="derived-item">s = s<sub>1</sub><span class="derived-note">(isentropic)</span></span>
+          </div>
+        </div>
+
+        <!-- State 3 -->
+        <div class="cycle-section">
+          <div class="cycle-point-header">
+            <span class="cycle-point-num active">3</span>
+            <span class="cycle-point-title">Condenser Exit</span>
+            <span id="badge-s3" class="state-badge state-subcooled">sat. liquid</span>
+          </div>
+          <div class="form-row">
+            <label for="T3">Condensing Temperature</label>
+            <div class="input-group">
+              <input type="number" id="T3" step="0.5" placeholder="e.g. 40">
+              <span class="input-unit">°C</span>
+            </div>
+          </div>
+          <label class="mod-checkbox">
+            <input type="checkbox" id="sc-exit">
+            <span>Subcooled exit</span>
+          </label>
+          <div id="sc-exit-extra" class="extra-fields hidden">
+            <div class="form-row" style="margin-top:10px">
+              <label for="P3sc">Condenser Pressure</label>
+              <div class="input-group">
+                <input type="number" id="P3sc" step="1" placeholder="e.g. 1200">
+                <span class="input-unit">kPa</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 4 (derived) -->
+        <div class="cycle-section cycle-section-derived">
+          <div class="cycle-point-header">
+            <span class="cycle-point-num derived">4</span>
+            <span class="cycle-point-title">Expansion Exit</span>
+            <span class="state-badge state-flash">derived</span>
+          </div>
+          <div class="derived-row">
+            <span class="derived-item">P = P<sub>evap</sub></span>
+            <span class="derived-sep">·</span>
+            <span class="derived-item">h = h<sub>3</sub><span class="derived-note">(isenthalpic)</span></span>
+          </div>
+        </div>
+
+        <button id="calc-btn" class="calc-btn" disabled>Calculate Cycle</button>
+      </div>
+
+      <!-- Warnings & notices -->
+      <div id="warnings-box" class="alert-box alert-warn hidden"></div>
+      <div id="transcrit-notice" class="alert-box alert-transcrit hidden">
+        ⚠ Condensing temperature exceeds critical point — transcritical operation.
+      </div>
+
+      <!-- Results -->
+      <div id="results-section" class="hidden">
+
+        <div class="panel-header panel-header-sub">
+          <span class="panel-title">State Properties</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="results-table" id="results-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>T <span class="th-unit">°C</span></th>
+                <th>P <span class="th-unit">kPa</span></th>
+                <th>h <span class="th-unit">kJ/kg</span></th>
+                <th>s <span class="th-unit">kJ/kg·K</span></th>
+                <th>x</th>
+                <th>ρ <span class="th-unit">kg/m³</span></th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-header panel-header-sub">
+          <span class="panel-title">Performance</span>
+        </div>
+
+        <div class="results calc-body">
+          <div class="section-divider" style="color:var(--accent)">Coefficient of Performance</div>
+          <div class="result-row">
+            <span class="result-key">COP<sub>c</sub> — Cooling</span>
+            <span class="result-val result-highlight" id="cop-c">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-key">COP<sub>h</sub> — Heating</span>
+            <span class="result-val result-highlight" id="cop-h">—</span>
+          </div>
+
+          <div class="section-divider" style="color:var(--accent3)">Heat Transfer</div>
+          <div class="result-row">
+            <span class="result-key">Q<sub>evap</sub></span>
+            <span class="result-val result-ok" id="q-evap">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-key">Q<sub>cond</sub></span>
+            <span class="result-val result-ok" id="q-cond">—</span>
+          </div>
+
+          <div class="section-divider" style="color:var(--accent2)">Work &amp; Balance</div>
+          <div class="result-row">
+            <span class="result-key">W<sub>comp</sub></span>
+            <span class="result-val" id="w-comp">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-key">Energy balance</span>
+            <span class="result-val result-ok" id="energy-balance">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="error-box" class="alert-box alert-error hidden"></div>
+
+    </div><!-- .pane (cycle analysis) -->
+
+    <!-- Pane: T-s diagram -->
+    <div class="pane pane-chart">
+      <div class="panel-header">
+        <span class="panel-title">T-s Diagram</span>
+        <span id="ts-fluid-label" class="chart-fluid-label"></span>
+        <button id="ts-recenter-btn" class="chart-btn" title="Reset view">⊙ Recenter</button>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="ts-chart"></canvas>
+      </div>
+    </div>
+
+    </div><!-- .col-right -->
+  </div><!-- .app-body -->
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script type="module" src="./assets/js/app.js"></script>
+</body>
+</html>
