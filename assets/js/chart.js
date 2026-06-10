@@ -1,7 +1,10 @@
 /**
  * chart.js — T-s diagram for FrigProp.
  * Requires Chart.js 4.x loaded as a global (window.Chart) before this runs.
+ * Data stays in SI internally; axis ticks/tooltips convert via units.js.
  */
+
+import * as units from "./units.js";
 
 const STYLE = {
   dome:    'rgba(0,212,255,0.70)',
@@ -76,9 +79,29 @@ export function initTsChart() {
   }, { passive: false });
   _canvas.addEventListener('touchend', () => { _drag = false; });
 
-  // Recenter button
+  // Recenter / zoom buttons
   const btn = document.getElementById('ts-recenter-btn');
   if (btn) btn.addEventListener('click', resetTsView);
+  const zin  = document.getElementById('ts-zoom-in-btn');
+  const zout = document.getElementById('ts-zoom-out-btn');
+  if (zin)  zin.addEventListener('click', () => _zoom(0.8));
+  if (zout) zout.addEventListener('click', () => _zoom(1.25));
+}
+
+/** Scale both axis ranges by `factor` about the current view center. */
+function _zoom(factor) {
+  if (!_chart) return;
+  const xs = _chart.scales.x;
+  const ys = _chart.scales.y;
+  const xc = (xs.min + xs.max) / 2;
+  const yc = (ys.min + ys.max) / 2;
+  const xHalf = (xs.max - xs.min) / 2 * factor;
+  const yHalf = (ys.max - ys.min) / 2 * factor;
+  _chart.options.scales.x.min = xc - xHalf;
+  _chart.options.scales.x.max = xc + xHalf;
+  _chart.options.scales.y.min = yc - yHalf;
+  _chart.options.scales.y.max = yc + yHalf;
+  _chart.update('none');
 }
 
 /**
@@ -249,8 +272,12 @@ function _buildCycleDatasets(states, satRows) {
   // 3→4: isenthalpic expansion (straight-line approximation in T-s)
   const path34 = [{ x: s3.s, y: s3.T_C }, { x: s4.s, y: s4.T_C }];
 
-  // 4→1: evaporation — horizontal at T_evap
-  const path41 = [{ x: s4.s, y: s4.T_C }, { x: s1.s, y: s1.T_C }];
+  // 4→1: horizontal evaporation at Tsat(P_evap) → optional superheat rise
+  const shelfE = _satShelfAtP(satRows, s4.P_kPa);
+  const path41 = [{ x: s4.s, y: s4.T_C }];
+  // dew-point vertex only when state 1 leaves the dome (superheated inlet)
+  if (shelfE && s1.s > shelfE.sg) path41.push({ x: shelfE.sg, y: shelfE.T });
+  path41.push({ x: s1.s, y: s1.T_C });
 
   const cyclePath = [
     ...path12,
@@ -317,13 +344,15 @@ function _buildOptions(bounds) {
       x: {
         ...axisCommon, type: 'linear',
         min: bounds?.xMin, max: bounds?.xMax,
-        title: { display: true, text: 's  (kJ / kg·K)', color: STYLE.label,
+        ticks: { ...axisCommon.ticks, callback: v => units.toDisplay(v, 's').toFixed(2) },
+        title: { display: true, text: `s  (${units.label('s')})`, color: STYLE.label,
                  font: { ...fontDef, size: 11 } },
       },
       y: {
         ...axisCommon, type: 'linear',
         min: bounds?.yMin, max: bounds?.yMax,
-        title: { display: true, text: 'T  (°C)', color: STYLE.label,
+        ticks: { ...axisCommon.ticks, callback: v => units.toDisplay(v, 'T').toFixed(0) },
+        title: { display: true, text: `T  (${units.label('T')})`, color: STYLE.label,
                  font: { ...fontDef, size: 11 } },
       },
     },
@@ -342,7 +371,8 @@ function _buildOptions(bounds) {
           label(ctx) {
             const { x, y, stateNum, isLookup } = ctx.raw;
             const prefix = stateNum ? `State ${stateNum}:  ` : (isLookup ? 'Lookup:  ' : '');
-            return `${prefix}T = ${y.toFixed(2)} °C   s = ${x.toFixed(4)} kJ/kg·K`;
+            return `${prefix}T = ${units.toDisplay(y, 'T').toFixed(2)} ${units.label('T')}   ` +
+                   `s = ${units.toDisplay(x, 's').toFixed(4)} ${units.label('s')}`;
           },
         },
       },

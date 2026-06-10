@@ -1,9 +1,17 @@
 /**
  * ui.js — DOM manipulation helpers for FrigProp.
- * No business logic here — pure rendering.
+ * No business logic here — pure rendering. All values cross this module's
+ * boundary in SI; display conversion goes through units.js.
  */
 
+import * as units from "./units.js";
+
 const $ = id => document.getElementById(id);
+
+/** Format an SI value for display in the current unit system. */
+function du(v, kind, decimals) {
+  return fmt(units.toDisplay(v, kind), decimals);
+}
 
 // ---------------------------------------------------------------------------
 // Status pill
@@ -112,6 +120,28 @@ function _gwpClass(gwp) {
 // Info panel
 // ---------------------------------------------------------------------------
 
+// Hover explanations for each property row (esp. initialisms)
+const INFO_TIPS = {
+  "Designation":   "ASHRAE Standard 34 refrigerant number",
+  "Chemical name": "Chemical name of the working fluid",
+  "Formula":       "Chemical formula",
+  "Type":          "Chemical family / refrigerant generation",
+  "Safety class":  "ASHRAE 34 safety group: toxicity (A = lower, B = higher) + flammability (1 = none … 3 = high)",
+  "GWP (AR5)":     "Global Warming Potential over 100 years, IPCC AR5 basis (CO₂ = 1)",
+  "ODP":           "Ozone Depletion Potential relative to R-11 (= 1.0)",
+  "Normal B.P.":   "Boiling temperature at 1 atm (101.325 kPa)",
+  "T_crit":        "Critical temperature — above it no liquid phase exists",
+  "P_crit":        "Critical pressure — saturation pressure at the critical point",
+  "T glide":       "Temperature glide: dew − bubble temperature spread during phase change (zeotropic blends)",
+  "M.W.":          "Molecular weight (molar mass)",
+  "Regulatory":    "Phase-out / phasedown status under the Montreal Protocol, EU F-Gas rules, or EPA SNAP",
+  "Components":    "Blend composition by mass fraction",
+  "Replaces":      "Refrigerants this fluid was developed to replace",
+  "Replaced by":   "Lower-GWP successors replacing this fluid",
+  "Applications":  "Typical system types using this fluid",
+  "h/s reference": "Zero-point convention for enthalpy and entropy — values are only comparable within one convention",
+};
+
 export function renderInfoPanel(key, info, meta) {
   const panel = $("info-content");
   panel.innerHTML = "";
@@ -128,10 +158,10 @@ export function renderInfoPanel(key, info, meta) {
     ["Safety class",  info.safety_class,         safetyColor],
     ["GWP (AR5)",     info.GWP_AR5 === 0 ? "0 (natural)" : info.GWP_AR5.toString(), gwpColor],
     ["ODP",           info.ODP === 0 ? "0.00" : info.ODP.toString(), odpColor],
-    ["Normal B.P.",   `${info.normal_boiling_point_C} °C`, ""],
-    ["T_crit",        `${info.T_crit_C} °C`,    ""],
-    ["P_crit",        `${info.P_crit_kPa} kPa`, ""],
-    ["T glide",       info.T_glide_C === 0 ? "0 (azeotrope)" : `${info.T_glide_C} °C`, info.T_glide_C > 1 ? "warn" : ""],
+    ["Normal B.P.",   `${du(info.normal_boiling_point_C, "T", 1)} ${units.label("T")}`, ""],
+    ["T_crit",        `${du(info.T_crit_C, "T", 1)} ${units.label("T")}`, ""],
+    ["P_crit",        `${du(info.P_crit_kPa, "P", 1)} ${units.label("P")}`, ""],
+    ["T glide",       info.T_glide_C === 0 ? "0 (azeotrope)" : `${du(info.T_glide_C, "dT", 1)} ${units.label("dT")}`, info.T_glide_C > 1 ? "warn" : ""],
     ["M.W.",          `${info.molecular_weight} g/mol`, ""],
     ["Regulatory",    info.regulatory_status,   "warn"],
   ];
@@ -147,7 +177,8 @@ export function renderInfoPanel(key, info, meta) {
   tbl.className = "info-table";
   rows.forEach(([k, v, cls]) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td class="info-key">${k}</td><td class="info-val ${cls || ""}">${v}</td>`;
+    const tip = INFO_TIPS[k] ? ` title="${INFO_TIPS[k]}"` : "";
+    tr.innerHTML = `<td class="info-key${INFO_TIPS[k] ? " has-tip" : ""}"${tip}>${k}</td><td class="info-val ${cls || ""}">${v}</td>`;
     tbl.appendChild(tr);
   });
   panel.appendChild(tbl);
@@ -193,12 +224,12 @@ export function wireInputControls() {
 
 export function getInputs() {
   return {
-    T1_C:     parseFloat($("T1").value),
-    T3_C:     parseFloat($("T3").value),
+    T1_C:     units.fromInput(parseFloat($("T1").value), "T"),
+    T3_C:     units.fromInput(parseFloat($("T3").value), "T"),
     superheat: $("sh-inlet").checked,
-    dT_sh_K:  parseFloat($("dT-sh").value),
+    dT_sh_K:  units.fromInput(parseFloat($("dT-sh").value), "dT"),
     subcool:  $("sc-exit").checked,
-    dT_sc_K:  parseFloat($("dT-sc").value),
+    dT_sc_K:  units.fromInput(parseFloat($("dT-sc").value), "dT"),
   };
 }
 
@@ -208,7 +239,33 @@ export function setRangeHint(meta) {
   if (!el) return;
   if (!meta) { el.textContent = ""; return; }
   const T_hi = Math.min(meta.T_max_C, meta.T_crit_C - 0.5);
-  el.textContent = `Saturation data: ${meta.T_min_C} °C to ${T_hi.toFixed(1)} °C · critical point ${meta.T_crit_C} °C`;
+  const L = units.label("T");
+  el.textContent = `Saturation data: ${du(meta.T_min_C, "T", 1)} ${L} to ${du(T_hi, "T", 1)} ${L} · critical point ${du(meta.T_crit_C, "T", 1)} ${L}`;
+}
+
+// ---------------------------------------------------------------------------
+// Unit system toggle
+// ---------------------------------------------------------------------------
+
+/** Rewrite all static unit labels and placeholders for the current system. */
+export function refreshUnitLabels() {
+  document.querySelectorAll("[data-kind]").forEach(el => {
+    el.textContent = units.label(el.dataset.kind);
+  });
+  document.querySelectorAll("input[data-ph-si]").forEach(el => {
+    el.placeholder = units.getSystem() === "IP" ? el.dataset.phIp : el.dataset.phSi;
+  });
+  const toggle = $("unit-toggle");
+  if (toggle) {
+    toggle.querySelectorAll(".unit-opt").forEach(o => {
+      o.classList.toggle("active", o.dataset.sys === units.getSystem());
+    });
+  }
+}
+
+export function onUnitToggle(handler) {
+  const btn = $("unit-toggle");
+  if (btn) btn.addEventListener("click", handler);
 }
 
 export function enableCalcButton(enabled) {
@@ -223,30 +280,35 @@ export function onCalcClick(handler) {
 // Property lookup pane
 // ---------------------------------------------------------------------------
 
+// field: [label, unit-kind]
 const PAIR_DEFS = {
-  TP:   { fields: [["Temperature", "°C"], ["Pressure", "kPa"]] },
-  PH:   { fields: [["Pressure", "kPa"], ["Enthalpy", "kJ/kg"]] },
-  PS:   { fields: [["Pressure", "kPa"], ["Entropy", "kJ/kg·K"]] },
-  TQ:   { fields: [["Temperature", "°C"], ["Quality", "0–1"]] },
-  PQ:   { fields: [["Pressure", "kPa"], ["Quality", "0–1"]] },
-  satT: { fields: [["Temperature", "°C"]] },
-  satP: { fields: [["Pressure", "kPa"]] },
+  TP:   { fields: [["Temperature", "T"], ["Pressure", "P"]] },
+  PH:   { fields: [["Pressure", "P"], ["Enthalpy", "h"]] },
+  PS:   { fields: [["Pressure", "P"], ["Entropy", "s"]] },
+  TQ:   { fields: [["Temperature", "T"], ["Quality", "x"]] },
+  PQ:   { fields: [["Pressure", "P"], ["Quality", "x"]] },
+  satT: { fields: [["Temperature", "T"]] },
+  satP: { fields: [["Pressure", "P"]] },
 };
 
+/** Re-apply labels/units for the selected lookup pair (also on unit toggle). */
+export function refreshLookupFields() {
+  const def = PAIR_DEFS[$("lookup-pair").value];
+  $("lookup-v1-label").textContent = def.fields[0][0];
+  $("lookup-v1-unit").textContent  = units.label(def.fields[0][1]);
+  const v2row = $("lookup-v2-row");
+  if (def.fields.length > 1) {
+    v2row.classList.remove("hidden");
+    $("lookup-v2-label").textContent = def.fields[1][0];
+    $("lookup-v2-unit").textContent  = units.label(def.fields[1][1]);
+  } else {
+    v2row.classList.add("hidden");
+  }
+}
+
 export function wireLookupControls(onSubmit) {
-  const pairSel = $("lookup-pair");
-  pairSel.addEventListener("change", () => {
-    const def = PAIR_DEFS[pairSel.value];
-    $("lookup-v1-label").textContent = def.fields[0][0];
-    $("lookup-v1-unit").textContent  = def.fields[0][1];
-    const v2row = $("lookup-v2-row");
-    if (def.fields.length > 1) {
-      v2row.classList.remove("hidden");
-      $("lookup-v2-label").textContent = def.fields[1][0];
-      $("lookup-v2-unit").textContent  = def.fields[1][1];
-    } else {
-      v2row.classList.add("hidden");
-    }
+  $("lookup-pair").addEventListener("change", () => {
+    refreshLookupFields();
     $("lookup-result").classList.add("hidden");
     clearLookupError();
   });
@@ -259,10 +321,13 @@ export function wireLookupControls(onSubmit) {
 }
 
 export function getLookupInputs() {
+  const def = PAIR_DEFS[$("lookup-pair").value];
   return {
     pair: $("lookup-pair").value,
-    v1: parseFloat($("lookup-v1").value),
-    v2: parseFloat($("lookup-v2").value),
+    v1: units.fromInput(parseFloat($("lookup-v1").value), def.fields[0][1]),
+    v2: def.fields.length > 1
+      ? units.fromInput(parseFloat($("lookup-v2").value), def.fields[1][1])
+      : NaN,
   };
 }
 
@@ -285,17 +350,17 @@ export function clearLookupError() {
 export function renderLookupState(st, phaseLabel) {
   clearLookupError();
   const rows = [
-    ["Phase",       phaseLabel,                          "highlight"],
-    ["T",           `${fmt(st.T_C, 2)} °C`,              ""],
-    ["P",           `${fmt(st.P_kPa, 1)} kPa`,           ""],
-    ["h",           `${fmt(st.h, 2)} kJ/kg`,             ""],
-    ["s",           `${fmt(st.s, 4)} kJ/kg·K`,           ""],
-    ["u",           `${fmt(st.u, 2)} kJ/kg`,             ""],
-    ["v",           `${st.rho ? (1 / st.rho).toPrecision(5) : "—"} m³/kg`, ""],
-    ["ρ",           `${fmt(st.rho, 3)} kg/m³`,           ""],
+    ["Phase",       phaseLabel,                                      "highlight"],
+    ["T",           `${du(st.T_C, "T", 2)} ${units.label("T")}`,     ""],
+    ["P",           `${du(st.P_kPa, "P", 1)} ${units.label("P")}`,   ""],
+    ["h",           `${du(st.h, "h", 2)} ${units.label("h")}`,       ""],
+    ["s",           `${du(st.s, "s", 4)} ${units.label("s")}`,       ""],
+    ["u",           `${du(st.u, "u", 2)} ${units.label("u")}`,       ""],
+    ["v",           `${st.rho ? units.toDisplay(1 / st.rho, "v").toPrecision(5) : "—"} ${units.label("v")}`, ""],
+    ["ρ",           `${du(st.rho, "rho", 3)} ${units.label("rho")}`, ""],
   ];
   if (st.x !== null && st.x !== undefined) rows.push(["x", fmt(st.x, 4), ""]);
-  if (st.cp !== null && st.cp !== undefined) rows.push(["cp", `${fmt(st.cp, 3)} kJ/kg·K`, ""]);
+  if (st.cp !== null && st.cp !== undefined) rows.push(["cp", `${du(st.cp, "cp", 3)} ${units.label("cp")}`, ""]);
   _renderLookupTable(rows);
 }
 
@@ -307,17 +372,17 @@ export function renderLookupSat(sat) {
   const glideP = Math.abs(sat.P_dew_kPa - sat.P_bub_kPa) > 0.001 * sat.P_bub_kPa;
   const rows = [
     ["T_sat", glideT
-      ? `${fmt(sat.T_bubble_C, 2)} (bub) / ${fmt(sat.T_dew_C, 2)} (dew) °C`
-      : `${fmt(sat.sat_T_C, 2)} °C`, "highlight"],
+      ? `${du(sat.T_bubble_C, "T", 2)} (bub) / ${du(sat.T_dew_C, "T", 2)} (dew) ${units.label("T")}`
+      : `${du(sat.sat_T_C, "T", 2)} ${units.label("T")}`, "highlight"],
     ["P_sat", glideP
-      ? `${fmt(sat.P_bub_kPa, 1)} (bub) / ${fmt(sat.P_dew_kPa, 1)} (dew) kPa`
-      : `${fmt(sat.sat_P_kPa, 1)} kPa`, "highlight"],
-    ["h_f / h_g",  `${fmt(sat.hf, 2)} / ${fmt(sat.hg, 2)} kJ/kg`, ""],
-    ["s_f / s_g",  `${fmt(sat.sf, 4)} / ${fmt(sat.sg, 4)} kJ/kg·K`, ""],
-    ["u_f / u_g",  `${fmt(sat.uf, 2)} / ${fmt(sat.ug, 2)} kJ/kg`, ""],
-    ["v_f / v_g",  `${(1 / sat.rhof).toPrecision(5)} / ${(1 / sat.rhog).toPrecision(5)} m³/kg`, ""],
-    ["ρ_f / ρ_g",  `${fmt(sat.rhof, 2)} / ${fmt(sat.rhog, 4)} kg/m³`, ""],
-    ["h_fg",       `${fmt(sat.hg - sat.hf, 2)} kJ/kg`, ""],
+      ? `${du(sat.P_bub_kPa, "P", 1)} (bub) / ${du(sat.P_dew_kPa, "P", 1)} (dew) ${units.label("P")}`
+      : `${du(sat.sat_P_kPa, "P", 1)} ${units.label("P")}`, "highlight"],
+    ["h_f / h_g",  `${du(sat.hf, "h", 2)} / ${du(sat.hg, "h", 2)} ${units.label("h")}`, ""],
+    ["s_f / s_g",  `${du(sat.sf, "s", 4)} / ${du(sat.sg, "s", 4)} ${units.label("s")}`, ""],
+    ["u_f / u_g",  `${du(sat.uf, "u", 2)} / ${du(sat.ug, "u", 2)} ${units.label("u")}`, ""],
+    ["v_f / v_g",  `${units.toDisplay(1 / sat.rhof, "v").toPrecision(5)} / ${units.toDisplay(1 / sat.rhog, "v").toPrecision(5)} ${units.label("v")}`, ""],
+    ["ρ_f / ρ_g",  `${du(sat.rhof, "rho", 2)} / ${du(sat.rhog, "rho", 4)} ${units.label("rho")}`, ""],
+    ["h_fg",       `${du(sat.hg - sat.hf, "h", 2)} ${units.label("h")}`, ""],
   ];
   _renderLookupTable(rows);
 }
@@ -405,23 +470,23 @@ export function renderResults(states, metrics, warnings, notes) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><span class="${badgeClass}">${i + 1}</span></td>
-      <td class="${phaseClass}">${fmt(s.T_C, 2)}</td>
-      <td>${fmt(s.P_kPa, 2)}</td>
-      <td>${fmt(s.h, 2)}</td>
-      <td>${fmt(s.s, 4)}</td>
-      <td>${fmt(s.u, 2)}</td>
+      <td class="${phaseClass}">${du(s.T_C, "T", 2)}</td>
+      <td>${du(s.P_kPa, "P", 2)}</td>
+      <td>${du(s.h, "h", 2)}</td>
+      <td>${du(s.s, "s", 4)}</td>
+      <td>${du(s.u, "u", 2)}</td>
       <td>${fmtX(s.x)}</td>
-      <td>${fmt(s.rho, 3)}</td>
+      <td>${du(s.rho, "rho", 3)}</td>
     `;
     tbody.appendChild(tr);
   });
 
+  const hUnit = units.label("h");
   $("cop-c").textContent = fmt(metrics.COP_c, 3);
   $("cop-h").textContent = fmt(metrics.COP_h, 3);
-  $("q-evap").innerHTML  = `${fmt(metrics.Q_evap, 2)} <span class="unit">kJ/kg</span>`;
-  $("q-cond").innerHTML  = `${fmt(metrics.Q_cond, 2)} <span class="unit">kJ/kg</span>`;
-  $("w-comp").innerHTML  = `${fmt(metrics.W_comp, 2)} <span class="unit">kJ/kg</span>`;
-  $("energy-balance").innerHTML = `${fmt(metrics.energy_balance_residual, 4)} <span class="unit">kJ/kg</span>`;
+  $("q-evap").innerHTML  = `${du(metrics.Q_evap, "h", 2)} <span class="unit">${hUnit}</span>`;
+  $("q-cond").innerHTML  = `${du(metrics.Q_cond, "h", 2)} <span class="unit">${hUnit}</span>`;
+  $("w-comp").innerHTML  = `${du(metrics.W_comp, "h", 2)} <span class="unit">${hUnit}</span>`;
 
   $("results-section").classList.remove("hidden");
 }

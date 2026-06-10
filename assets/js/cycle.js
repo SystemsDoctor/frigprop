@@ -59,8 +59,7 @@ export function analyzeVCRC(states) {
   const Q_cond = s2.h - s3.h;
   const COP_c = Q_evap / W_comp;
   const COP_h = Q_cond / W_comp;
-  const energy_balance_residual = Q_evap + W_comp - Q_cond;
-  return { W_comp, Q_evap, Q_cond, COP_c, COP_h, energy_balance_residual };
+  return { W_comp, Q_evap, Q_cond, COP_c, COP_h };
 }
 
 /**

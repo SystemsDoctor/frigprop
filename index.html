@@ -7,16 +7,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260610b">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260610c">
 </head>
 <body>
 
   <!-- Nav -->
   <nav>
-    <div class="logo">Frig<span>Prop</span></div>
+    <div class="logo">Frig<span>Prop</span><span class="version-tag">v1.1</span></div>
     <div id="nav-ref-display" class="nav-ref-display"></div>
     <div class="nav-right">
       <span id="status-pill" class="nav-badge loading">Initialising…</span>
+      <button id="unit-toggle" class="unit-toggle" title="Toggle SI / US customary units">
+        <span class="unit-opt active" data-sys="SI">SI</span><span class="unit-opt" data-sys="IP">US</span>
+      </button>
     </div>
   </nav>
 
@@ -107,8 +110,8 @@
           <div class="form-row">
             <label for="T1">Evaporator Temperature</label>
             <div class="input-group">
-              <input type="number" id="T1" step="0.5" placeholder="e.g. −10">
-              <span class="input-unit">°C</span>
+              <input type="number" id="T1" step="0.5" placeholder="e.g. −10" data-ph-si="e.g. −10" data-ph-ip="e.g. 14">
+              <span class="input-unit" data-kind="T">°C</span>
             </div>
           </div>
           <label class="mod-checkbox">
@@ -119,8 +122,8 @@
             <div class="form-row" style="margin-top:10px">
               <label for="dT-sh">Superheat above saturation</label>
               <div class="input-group">
-                <input type="number" id="dT-sh" step="0.5" min="0" placeholder="e.g. 5">
-                <span class="input-unit">K</span>
+                <input type="number" id="dT-sh" step="0.5" min="0" placeholder="e.g. 5" data-ph-si="e.g. 5" data-ph-ip="e.g. 9">
+                <span class="input-unit" data-kind="dT">K</span>
               </div>
             </div>
           </div>
@@ -150,8 +153,8 @@
           <div class="form-row">
             <label for="T3">Condensing Temperature</label>
             <div class="input-group">
-              <input type="number" id="T3" step="0.5" placeholder="e.g. 40">
-              <span class="input-unit">°C</span>
+              <input type="number" id="T3" step="0.5" placeholder="e.g. 40" data-ph-si="e.g. 40" data-ph-ip="e.g. 104">
+              <span class="input-unit" data-kind="T">°C</span>
             </div>
           </div>
           <label class="mod-checkbox">
@@ -162,8 +165,8 @@
             <div class="form-row" style="margin-top:10px">
               <label for="dT-sc">Subcooling below saturation</label>
               <div class="input-group">
-                <input type="number" id="dT-sc" step="0.5" min="0" placeholder="e.g. 5">
-                <span class="input-unit">K</span>
+                <input type="number" id="dT-sc" step="0.5" min="0" placeholder="e.g. 5" data-ph-si="e.g. 5" data-ph-ip="e.g. 9">
+                <span class="input-unit" data-kind="dT">K</span>
               </div>
             </div>
           </div>
@@ -207,13 +210,13 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>T <span class="th-unit">°C</span></th>
-                <th>P <span class="th-unit">kPa</span></th>
-                <th>h <span class="th-unit">kJ/kg</span></th>
-                <th>s <span class="th-unit">kJ/kg·K</span></th>
-                <th>u <span class="th-unit">kJ/kg</span></th>
+                <th>T <span class="th-unit" data-kind="T">°C</span></th>
+                <th>P <span class="th-unit" data-kind="P">kPa</span></th>
+                <th>h <span class="th-unit" data-kind="h">kJ/kg</span></th>
+                <th>s <span class="th-unit" data-kind="s">kJ/kg·K</span></th>
+                <th>u <span class="th-unit" data-kind="u">kJ/kg</span></th>
                 <th>x</th>
-                <th>ρ <span class="th-unit">kg/m³</span></th>
+                <th>ρ <span class="th-unit" data-kind="rho">kg/m³</span></th>
               </tr>
             </thead>
             <tbody id="results-tbody"></tbody>
@@ -250,10 +253,6 @@
             <span class="result-key">W<sub>comp</sub></span>
             <span class="result-val" id="w-comp">—</span>
           </div>
-          <div class="result-row">
-            <span class="result-key">Energy balance</span>
-            <span class="result-val result-ok" id="energy-balance">—</span>
-          </div>
         </div>
       </div>
 
@@ -267,6 +266,8 @@
       <div class="panel-header">
         <span class="panel-title">T-s Diagram</span>
         <span id="ts-fluid-label" class="chart-fluid-label"></span>
+        <button id="ts-zoom-in-btn" class="chart-btn" title="Zoom in">＋</button>
+        <button id="ts-zoom-out-btn" class="chart-btn" title="Zoom out">－</button>
         <button id="ts-recenter-btn" class="chart-btn" title="Reset view">⊙ Recenter</button>
       </div>
       <div class="chart-wrap">
@@ -279,6 +280,6 @@
   </div><!-- .app-body -->
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260610b"></script>
+  <script type="module" src="./assets/js/app.js?v=20260610c"></script>
 </body>
 </html>
