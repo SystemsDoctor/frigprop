@@ -18,6 +18,9 @@ let _canvas      = null;
 let _domeBounds  = null;   // natural bounds for saturation dome only
 let _cycleBounds = null;   // natural bounds when cycle is shown
 let _hasCycle    = false;
+let _marker      = null;   // lookup-state marker {x: s, y: T} or null
+
+const MARKER_LABEL = '_lookup';
 
 // Pan state
 let _drag        = false;
@@ -95,6 +98,7 @@ export function updateTsChart(satRows, states) {
   const bounds   = _naturalBounds();
   const datasets = _buildDomeDatasets(satRows);
   if (_hasCycle) datasets.push(..._buildCycleDatasets(states, satRows));
+  if (_marker)   datasets.push(_buildMarkerDataset(_marker));
 
   if (_chart) {
     _chart.data.datasets = datasets;
@@ -116,6 +120,31 @@ export function clearCycleOverlay() {
   _cycleBounds = null;
   _chart.data.datasets = _chart.data.datasets.slice(0, 2);
   _chart.update('active');
+}
+
+/**
+ * Show (or clear, with null) a lookup-state marker on the diagram.
+ * @param {{x: number, y: number}|null} pt  — s (kJ/kg·K), T (°C)
+ */
+export function setTsMarker(pt) {
+  _marker = pt;
+  if (!_chart) return;
+  _chart.data.datasets = _chart.data.datasets.filter(d => d.label !== MARKER_LABEL);
+  if (pt) _chart.data.datasets.push(_buildMarkerDataset(pt));
+  _chart.update('none');
+}
+
+function _buildMarkerDataset(pt) {
+  return {
+    label: MARKER_LABEL,
+    data: [{ x: pt.x, y: pt.y, isLookup: true }],
+    showLine: false,
+    pointStyle: 'rectRot',
+    pointRadius: 7, pointHoverRadius: 9,
+    pointBackgroundColor: '#ffd166',
+    pointBorderColor: '#0a0e14', pointBorderWidth: 1.5,
+    order: 0, parsing: false,
+  };
 }
 
 /** Reset pan to the natural view: dome-only, or dome+cycle if cycle is shown. */
@@ -300,8 +329,8 @@ function _buildOptions(bounds) {
         callbacks: {
           title: () => '',
           label(ctx) {
-            const { x, y, stateNum } = ctx.raw;
-            const prefix = stateNum ? `State ${stateNum}:  ` : '';
+            const { x, y, stateNum, isLookup } = ctx.raw;
+            const prefix = stateNum ? `State ${stateNum}:  ` : (isLookup ? 'Lookup:  ' : '');
             return `${prefix}T = ${y.toFixed(2)} °C   s = ${x.toFixed(4)} kJ/kg·K`;
           },
         },

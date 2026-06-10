@@ -214,6 +214,123 @@ export function onCalcClick(handler) {
 }
 
 // ---------------------------------------------------------------------------
+// Property lookup pane
+// ---------------------------------------------------------------------------
+
+const PAIR_DEFS = {
+  TP:   { fields: [["Temperature", "°C"], ["Pressure", "kPa"]] },
+  PH:   { fields: [["Pressure", "kPa"], ["Enthalpy", "kJ/kg"]] },
+  PS:   { fields: [["Pressure", "kPa"], ["Entropy", "kJ/kg·K"]] },
+  TQ:   { fields: [["Temperature", "°C"], ["Quality", "0–1"]] },
+  PQ:   { fields: [["Pressure", "kPa"], ["Quality", "0–1"]] },
+  satT: { fields: [["Temperature", "°C"]] },
+  satP: { fields: [["Pressure", "kPa"]] },
+};
+
+export function wireLookupControls(onSubmit) {
+  const pairSel = $("lookup-pair");
+  pairSel.addEventListener("change", () => {
+    const def = PAIR_DEFS[pairSel.value];
+    $("lookup-v1-label").textContent = def.fields[0][0];
+    $("lookup-v1-unit").textContent  = def.fields[0][1];
+    const v2row = $("lookup-v2-row");
+    if (def.fields.length > 1) {
+      v2row.classList.remove("hidden");
+      $("lookup-v2-label").textContent = def.fields[1][0];
+      $("lookup-v2-unit").textContent  = def.fields[1][1];
+    } else {
+      v2row.classList.add("hidden");
+    }
+    $("lookup-result").classList.add("hidden");
+    clearLookupError();
+  });
+
+  const submit = () => onSubmit(getLookupInputs());
+  $("lookup-btn").addEventListener("click", submit);
+  for (const id of ["lookup-v1", "lookup-v2"]) {
+    $(id).addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+  }
+}
+
+export function getLookupInputs() {
+  return {
+    pair: $("lookup-pair").value,
+    v1: parseFloat($("lookup-v1").value),
+    v2: parseFloat($("lookup-v2").value),
+  };
+}
+
+export function enableLookupButton(enabled) {
+  $("lookup-btn").disabled = !enabled;
+}
+
+export function showLookupError(msg) {
+  const box = $("lookup-error");
+  box.textContent = msg;
+  box.classList.remove("hidden");
+  $("lookup-result").classList.add("hidden");
+}
+
+export function clearLookupError() {
+  $("lookup-error").classList.add("hidden");
+}
+
+/** Render a single-/two-phase state in the lookup pane. */
+export function renderLookupState(st, phaseLabel) {
+  clearLookupError();
+  const rows = [
+    ["Phase",       phaseLabel,                          "highlight"],
+    ["T",           `${fmt(st.T_C, 2)} °C`,              ""],
+    ["P",           `${fmt(st.P_kPa, 1)} kPa`,           ""],
+    ["h",           `${fmt(st.h, 2)} kJ/kg`,             ""],
+    ["s",           `${fmt(st.s, 4)} kJ/kg·K`,           ""],
+    ["u",           `${fmt(st.u, 2)} kJ/kg`,             ""],
+    ["v",           `${st.rho ? (1 / st.rho).toPrecision(5) : "—"} m³/kg`, ""],
+    ["ρ",           `${fmt(st.rho, 3)} kg/m³`,           ""],
+  ];
+  if (st.x !== null && st.x !== undefined) rows.push(["x", fmt(st.x, 4), ""]);
+  if (st.cp !== null && st.cp !== undefined) rows.push(["cp", `${fmt(st.cp, 3)} kJ/kg·K`, ""]);
+  _renderLookupTable(rows);
+}
+
+/** Render a full saturation row (f/g sides) in the lookup pane. */
+export function renderLookupSat(sat) {
+  clearLookupError();
+  // Zeotropic glide shows in T for P-keyed rows, in P for T-keyed rows
+  const glideT = Math.abs(sat.T_dew_C - sat.T_bubble_C) > 0.05;
+  const glideP = Math.abs(sat.P_dew_kPa - sat.P_bub_kPa) > 0.001 * sat.P_bub_kPa;
+  const rows = [
+    ["T_sat", glideT
+      ? `${fmt(sat.T_bubble_C, 2)} (bub) / ${fmt(sat.T_dew_C, 2)} (dew) °C`
+      : `${fmt(sat.sat_T_C, 2)} °C`, "highlight"],
+    ["P_sat", glideP
+      ? `${fmt(sat.P_bub_kPa, 1)} (bub) / ${fmt(sat.P_dew_kPa, 1)} (dew) kPa`
+      : `${fmt(sat.sat_P_kPa, 1)} kPa`, "highlight"],
+    ["h_f / h_g",  `${fmt(sat.hf, 2)} / ${fmt(sat.hg, 2)} kJ/kg`, ""],
+    ["s_f / s_g",  `${fmt(sat.sf, 4)} / ${fmt(sat.sg, 4)} kJ/kg·K`, ""],
+    ["u_f / u_g",  `${fmt(sat.uf, 2)} / ${fmt(sat.ug, 2)} kJ/kg`, ""],
+    ["v_f / v_g",  `${(1 / sat.rhof).toPrecision(5)} / ${(1 / sat.rhog).toPrecision(5)} m³/kg`, ""],
+    ["ρ_f / ρ_g",  `${fmt(sat.rhof, 2)} / ${fmt(sat.rhog, 4)} kg/m³`, ""],
+    ["h_fg",       `${fmt(sat.hg - sat.hf, 2)} kJ/kg`, ""],
+  ];
+  _renderLookupTable(rows);
+}
+
+function _renderLookupTable(rows) {
+  const box = $("lookup-result");
+  box.innerHTML = "";
+  const tbl = document.createElement("table");
+  tbl.className = "info-table";
+  rows.forEach(([k, v, cls]) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="info-key">${k}</td><td class="info-val ${cls || ""}">${v}</td>`;
+    tbl.appendChild(tr);
+  });
+  box.appendChild(tbl);
+  box.classList.remove("hidden");
+}
+
+// ---------------------------------------------------------------------------
 // Results
 // ---------------------------------------------------------------------------
 

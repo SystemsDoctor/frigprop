@@ -7,8 +7,10 @@
 > range validation + transcritical guard (A5/C5a), u column in results,
 > wet-compression info note (C4). Additions beyond plan: log-P interpolation,
 > geometric ρ interpolation, glide-aware bubble/dew pressures.
-> Next: Phase 3 (property lookup pane), then Phase 4.2–4.4 (deploy, README,
-> chart fixes A6, delete coolprop.js).
+> Phase 3 complete: Property Lookup pane (T&P, P&h, P&s, T&x, P&x, plus
+> saturation-row views with glide-aware bubble/dew display), full state output
+> incl. u and v, phase labeling, T-s diagram lookup marker (D5).
+> Next: Phase 4.2–4.4 (Pages deploy, README, chart fixes A6, delete coolprop.js).
 
 Goal: a GitHub-Pages-hosted interactive page where a user (1) selects a modern
 refrigerant from a card gallery, (2) sees regulatory / applications /

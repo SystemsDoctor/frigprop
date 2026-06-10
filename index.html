@@ -42,6 +42,44 @@
         <div id="info-content" class="info-placeholder">Select a refrigerant above.</div>
       </div>
 
+      <!-- Pane: property lookup -->
+      <div class="pane">
+        <div class="panel-header">
+          <span class="panel-title">Property Lookup</span>
+        </div>
+        <div class="calc-body">
+          <div class="form-row">
+            <label for="lookup-pair">Known properties</label>
+            <select id="lookup-pair" class="lookup-select">
+              <option value="TP">T &amp; P</option>
+              <option value="PH">P &amp; h</option>
+              <option value="PS">P &amp; s</option>
+              <option value="TQ">T &amp; quality</option>
+              <option value="PQ">P &amp; quality</option>
+              <option value="satT">Saturation @ T</option>
+              <option value="satP">Saturation @ P</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="lookup-v1" id="lookup-v1-label">Temperature</label>
+            <div class="input-group">
+              <input type="number" id="lookup-v1" step="any" placeholder="e.g. 25">
+              <span class="input-unit" id="lookup-v1-unit">°C</span>
+            </div>
+          </div>
+          <div class="form-row" id="lookup-v2-row">
+            <label for="lookup-v2" id="lookup-v2-label">Pressure</label>
+            <div class="input-group">
+              <input type="number" id="lookup-v2" step="any" placeholder="e.g. 500">
+              <span class="input-unit" id="lookup-v2-unit">kPa</span>
+            </div>
+          </div>
+          <button id="lookup-btn" class="calc-btn" disabled>Look Up</button>
+        </div>
+        <div id="lookup-error" class="alert-box alert-error hidden"></div>
+        <div id="lookup-result" class="hidden"></div>
+      </div>
+
     </div>
 
     <!-- RIGHT COLUMN: cycle analysis + T-s diagram -->
