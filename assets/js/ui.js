@@ -140,6 +140,8 @@ export function renderInfoPanel(key, info, meta) {
   if (info.replaces && info.replaces.length)       rows.push(["Replaces",    info.replaces.join(", "), ""]);
   if (info.replaced_by && info.replaced_by.length) rows.push(["Replaced by", info.replaced_by.join(", "), "dim"]);
   if (info.typical_applications) rows.push(["Applications", info.typical_applications.join(", "), ""]);
+  // h/s values are only comparable within one reference convention
+  if (info.reference_state) rows.push(["h/s reference", info.reference_state, "dim"]);
 
   const tbl = document.createElement("table");
   tbl.className = "info-table";
