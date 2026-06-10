@@ -1,5 +1,11 @@
 # FrigProp — Review Findings & Implementation Plan
 
+> **Status:** Phase 1 (section B) complete — schema v2 ΔT-grids generated,
+> `tables.js` rewritten, 49/49 accuracy cases pass vs CoolProp (A1–A4 fixed).
+> Additions beyond plan: log-P interpolation; glide-aware bubble/dew pressures
+> (`P_bub`/`P_dew` sat columns) so blend cycles anchor correctly.
+> Next: Phase 4.1 harness commit, then Phase 2.
+
 Goal: a GitHub-Pages-hosted interactive page where a user (1) selects a modern
 refrigerant from a card gallery, (2) sees regulatory / applications /
 availability info, (3) looks up thermodynamic properties (T, P, h, s, u, v, ρ, x)

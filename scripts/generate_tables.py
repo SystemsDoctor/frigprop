@@ -48,13 +48,36 @@ FLUIDS = {
     "R717":    {"cp_name": "Ammonia",      "T_min_C": -60, "T_max_C": 100, "P_max_kPa": 3000},
 }
 
-SH_T_VALUES_C  = [-20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 140]
+SCHEMA_VERSION = 2
+
+# Single-phase grids are indexed by distance from saturation (ΔT) so every
+# cell is valid — see PLAN.md Phase 1.
+SH_DT_VALUES_K = [0, 2, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 120, 140]
+SC_DT_VALUES_K = [0, 1, 2, 5, 10, 15, 20, 30, 40]
 SH_P_VALUES_KPA = [50, 75, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000,
                    2500, 3000, 4000, 5000, 6000, 8000, 10000, 12000]
+P_CRIT_ANCHOR_FRACS = [0.80, 0.90, 0.95, 0.99]
 
 SAT_T_STEP = 0.5
 R744_CRIT_T_C = 30.978
 R744_CRIT_FINE_RANGE = 5.0
+
+
+def build_P_values(P_max_kPa, P_crit_kPa, P_triple_kPa=None):
+    """Standard pressures up to the limit, plus near-critical anchor points.
+    Pressures below the triple point have no liquid-vapor saturation (CO2)."""
+    limit = min(P_max_kPa, P_crit_kPa * 0.99) if P_crit_kPa else P_max_kPa
+    P_floor = P_triple_kPa if P_triple_kPa else 0.0
+    vals = [float(p) for p in SH_P_VALUES_KPA if P_floor <= p <= limit]
+    if P_crit_kPa:
+        for f in P_CRIT_ANCHOR_FRACS:
+            p = round(P_crit_kPa * f, 1)
+            if p > limit + 1e-9:
+                continue
+            # skip anchors within 2 % of an existing point
+            if all(abs(p - v) / v > 0.02 for v in vals):
+                vals.append(p)
+    return sorted(vals)
 
 
 def safe_props(fluid, output, input1, val1, input2, val2):
@@ -133,7 +156,13 @@ def generate_sat_table(fluid_key, cp_name, T_min_C, T_max_C, T_crit_C):
         sg   = safe_props(cp_name, "S", "T", T_K, "Q", 1)
         rhof = safe_props(cp_name, "D", "T", T_K, "Q", 0)
         rhog = safe_props(cp_name, "D", "T", T_K, "Q", 1)
+        uf   = safe_props(cp_name, "U", "T", T_K, "Q", 0)
+        ug   = safe_props(cp_name, "U", "T", T_K, "Q", 1)
+        # bubble/dew pressures: equal for pure fluids, differ for zeotropes
+        P_bub = safe_props(cp_name, "P", "T", T_K, "Q", 0)
+        P_dew = safe_props(cp_name, "P", "T", T_K, "Q", 1)
 
+        # new columns appended last so pre-existing column indices stay stable
         row = [
             round(T_C, 2),
             round(P_kPa, 4),
@@ -143,6 +172,10 @@ def generate_sat_table(fluid_key, cp_name, T_min_C, T_max_C, T_crit_C):
             round(sg  / 1000.0, 6)  if sg   is not None else None,
             round(rhof, 4)           if rhof is not None else None,
             round(rhog, 6)           if rhog is not None else None,
+            round(uf  / 1000.0, 4)  if uf   is not None else None,
+            round(ug  / 1000.0, 4)  if ug   is not None else None,
+            round(P_bub / 1000.0, 4) if P_bub is not None else None,
+            round(P_dew / 1000.0, 4) if P_dew is not None else None,
         ]
         rows.append(row)
 
@@ -150,11 +183,12 @@ def generate_sat_table(fluid_key, cp_name, T_min_C, T_max_C, T_crit_C):
     return {
         "fluid": fluid_key,
         "type": "saturation",
+        "schema_version": SCHEMA_VERSION,
         "T_min_C": float(T_min_C),
         "T_max_C": float(T_actual_max),
         "T_step_C": SAT_T_STEP,
-        "units": {"T": "C", "P": "kPa", "h": "kJ/kg", "s": "kJ/kgK", "rho": "kg/m3"},
-        "columns": ["T", "P_sat", "hf", "hg", "sf", "sg", "rhof", "rhog"],
+        "units": {"T": "C", "P": "kPa", "h": "kJ/kg", "s": "kJ/kgK", "rho": "kg/m3", "u": "kJ/kg"},
+        "columns": ["T", "P_sat", "hf", "hg", "sf", "sg", "rhof", "rhog", "uf", "ug", "P_bub", "P_dew"],
         "rows": rows,
     }
 
@@ -169,85 +203,67 @@ def get_T_sat_from_P(cp_name, P_kPa):
     return None
 
 
-def generate_superheat_table(fluid_key, cp_name, P_max_kPa, P_crit_kPa):
-    P_limit = min(P_max_kPa, P_crit_kPa * 0.99) if P_crit_kPa else P_max_kPa
-    P_vals  = [p for p in SH_P_VALUES_KPA if p <= P_limit]
+def _props_at(cp_name, T_K, P_Pa, dT, Q_at_sat):
+    """Properties at one grid node. ΔT=0 rows use the saturation curve (Q)
+    directly so the anchor row is exact and always converges."""
+    out = {}
+    for key, sym in (("h", "H"), ("s", "S"), ("rho", "D"), ("cp", "C"), ("u", "U")):
+        if dT == 0:
+            v = safe_props(cp_name, sym, "P", P_Pa, "Q", Q_at_sat)
+        else:
+            v = safe_props(cp_name, sym, "T", T_K, "P", P_Pa)
+        out[key] = v
+    return out
 
-    T_vals = SH_T_VALUES_C.copy()
-    h_grid, s_grid, rho_grid, cp_grid = [], [], [], []
+
+def _round_node(v, key):
+    if v is None:
+        return None
+    if key == "rho":
+        return round(v, 4)
+    if key == "s":
+        return round(v / 1000.0, 6)
+    return round(v / 1000.0, 4)  # h, u, cp
+
+
+def generate_dt_table(fluid_key, cp_name, table_type, dT_values, P_vals):
+    """Single-phase grid indexed by (ΔT from saturation, P).
+    superheat: T = T_dew(P) + ΔT;  subcool: T = T_bubble(P) − ΔT."""
+    sign, Q_sat = (1, 1) if table_type == "superheat" else (-1, 0)
+
+    Tsat_C = []
+    for P_kPa in P_vals:
+        T_K = safe_props(cp_name, "T", "P", P_kPa * 1000.0, "Q", Q_sat)
+        Tsat_C.append(round(T_K - 273.15, 4) if T_K is not None else None)
+
+    grids = {k: [] for k in ("h", "s", "rho", "cp", "u")}
     valid_count = 0
-
-    for T_C in T_vals:
-        T_K = T_C + 273.15
-        h_row, s_row, rho_row, cp_row = [], [], [], []
-        for P_kPa in P_vals:
-            T_sat_C = get_T_sat_from_P(cp_name, P_kPa)
-            if T_sat_C is None or T_C <= T_sat_C + 0.5:
-                h_row.append(None); s_row.append(None)
-                rho_row.append(None); cp_row.append(None)
+    for dT in dT_values:
+        rows = {k: [] for k in grids}
+        for j, P_kPa in enumerate(P_vals):
+            if Tsat_C[j] is None:
+                for k in grids:
+                    rows[k].append(None)
                 continue
-            h     = safe_props(cp_name, "H", "T", T_K, "P", P_kPa * 1000.0)
-            s     = safe_props(cp_name, "S", "T", T_K, "P", P_kPa * 1000.0)
-            rho   = safe_props(cp_name, "D", "T", T_K, "P", P_kPa * 1000.0)
-            cp_val= safe_props(cp_name, "C", "T", T_K, "P", P_kPa * 1000.0)
-            h_row.append(  round(h      / 1000.0, 4) if h      is not None else None)
-            s_row.append(  round(s      / 1000.0, 6) if s      is not None else None)
-            rho_row.append(round(rho,    4)            if rho    is not None else None)
-            cp_row.append( round(cp_val / 1000.0, 4)  if cp_val is not None else None)
-            if h is not None:
+            T_K = Tsat_C[j] + 273.15 + sign * dT
+            node = _props_at(cp_name, T_K, P_kPa * 1000.0, dT, Q_sat)
+            for k in grids:
+                rows[k].append(_round_node(node[k], k))
+            if node["h"] is not None:
                 valid_count += 1
-        h_grid.append(h_row); s_grid.append(s_row)
-        rho_grid.append(rho_row); cp_grid.append(cp_row)
+        for k in grids:
+            grids[k].append(rows[k])
 
     return {
         "fluid": fluid_key,
-        "type": "superheat",
-        "T_values_C": T_vals,
+        "type": table_type,
+        "schema_version": SCHEMA_VERSION,
+        "dT_values_K": dT_values,
         "P_values_kPa": P_vals,
-        "units": {"h": "kJ/kg", "s": "kJ/kgK", "rho": "kg/m3", "cp": "kJ/kgK"},
-        "properties": ["h", "s", "rho", "cp"],
-        "grid": {"h": h_grid, "s": s_grid, "rho": rho_grid, "cp": cp_grid},
-    }, valid_count
-
-
-def generate_subcool_table(fluid_key, cp_name, P_max_kPa, P_crit_kPa):
-    P_limit = min(P_max_kPa, P_crit_kPa * 0.99) if P_crit_kPa else P_max_kPa
-    P_vals  = [p for p in SH_P_VALUES_KPA if p <= P_limit]
-
-    T_vals = [-60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80]
-    h_grid, s_grid, rho_grid, cp_grid = [], [], [], []
-    valid_count = 0
-
-    for T_C in T_vals:
-        T_K = T_C + 273.15
-        h_row, s_row, rho_row, cp_row = [], [], [], []
-        for P_kPa in P_vals:
-            T_sat_C = get_T_sat_from_P(cp_name, P_kPa)
-            if T_sat_C is None or T_C >= T_sat_C - 0.5:
-                h_row.append(None); s_row.append(None)
-                rho_row.append(None); cp_row.append(None)
-                continue
-            h     = safe_props(cp_name, "H", "T", T_K, "P", P_kPa * 1000.0)
-            s     = safe_props(cp_name, "S", "T", T_K, "P", P_kPa * 1000.0)
-            rho   = safe_props(cp_name, "D", "T", T_K, "P", P_kPa * 1000.0)
-            cp_val= safe_props(cp_name, "C", "T", T_K, "P", P_kPa * 1000.0)
-            h_row.append(  round(h      / 1000.0, 4) if h      is not None else None)
-            s_row.append(  round(s      / 1000.0, 6) if s      is not None else None)
-            rho_row.append(round(rho,    4)            if rho    is not None else None)
-            cp_row.append( round(cp_val / 1000.0, 4)  if cp_val is not None else None)
-            if h is not None:
-                valid_count += 1
-        h_grid.append(h_row); s_grid.append(s_row)
-        rho_grid.append(rho_row); cp_grid.append(cp_row)
-
-    return {
-        "fluid": fluid_key,
-        "type": "subcool",
-        "T_values_C": T_vals,
-        "P_values_kPa": P_vals,
-        "units": {"h": "kJ/kg", "s": "kJ/kgK", "rho": "kg/m3", "cp": "kJ/kgK"},
-        "properties": ["h", "s", "rho", "cp"],
-        "grid": {"h": h_grid, "s": s_grid, "rho": rho_grid, "cp": cp_grid},
+        "Tsat_C": Tsat_C,
+        "units": {"h": "kJ/kg", "s": "kJ/kgK", "rho": "kg/m3", "cp": "kJ/kgK", "u": "kJ/kg"},
+        "properties": ["h", "s", "rho", "cp", "u"],
+        "grid": grids,
     }, valid_count
 
 
@@ -269,10 +285,15 @@ def generate_fluid(fluid_key, run_only=None):
     sat = generate_sat_table(fluid_key, cp_name, cfg["T_min_C"], cfg["T_max_C"], T_crit_C)
     write_json(os.path.join(out_dir, "sat.json"), sat)
 
-    sh, sh_count = generate_superheat_table(fluid_key, cp_name, cfg["P_max_kPa"], P_crit_kPa)
+    try:
+        P_triple_kPa = CP.PropsSI("ptriple", cfg["cp_name"]) / 1000.0
+    except Exception:
+        P_triple_kPa = None
+    P_vals = build_P_values(cfg["P_max_kPa"], P_crit_kPa, P_triple_kPa)
+    sh, sh_count = generate_dt_table(fluid_key, cp_name, "superheat", SH_DT_VALUES_K, P_vals)
     write_json(os.path.join(out_dir, "superheat.json"), sh)
 
-    sc, sc_count = generate_subcool_table(fluid_key, cp_name, cfg["P_max_kPa"], P_crit_kPa)
+    sc, sc_count = generate_dt_table(fluid_key, cp_name, "subcool", SC_DT_VALUES_K, P_vals)
     write_json(os.path.join(out_dir, "subcool.json"), sc)
 
     print(f"✓ {fluid_key:8s}  sat:{len(sat['rows'])} rows  "
@@ -316,6 +337,7 @@ def main():
     # Preserve FLUIDS dict ordering in the manifest
     ordered = {k: manifest_fluids[k] for k in FLUIDS if k in manifest_fluids}
     manifest = {
+        "schema_version":   SCHEMA_VERSION,
         "generated_utc":    datetime.now(timezone.utc).isoformat(),
         "coolprop_version": CP.get_global_param_string("version"),
         "fluids":           ordered,
