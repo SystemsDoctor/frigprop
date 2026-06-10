@@ -45,5 +45,8 @@ Roadmap and known bugs: `PLAN.md`. Data formats: `.claude/docs/data-schemas.md`.
 - Match existing code: 2-space indent, `_private` helpers, JSDoc on exports,
   section divider comments. CSS uses custom properties in `style.css` — reuse
   the existing `--accent*`/panel patterns rather than inventing new ones.
+- When changing `style.css` or any `assets/js/*`, bump the `?v=` query on the
+  stylesheet/script tags in `index.html` — GitHub Pages caches assets ~10 min
+  and a stale-CSS/fresh-HTML mix breaks the layout for viewers.
 - Errors thrown by the backend must state the value and the valid range;
   the UI must turn them into friendly messages, never raw exceptions.
