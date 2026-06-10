@@ -1,6 +1,6 @@
 /**
  * app.js — Controller. Wires backend + cycle logic + UI together.
- * To switch to Plan A (CoolProp WASM), change this one import:
+ * The property backend is swappable via this one import (same interface).
  */
 import backend from "./tables.js";
 import { computeVCRCStates, analyzeVCRC, validateCycle } from "./cycle.js";

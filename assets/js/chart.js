@@ -233,16 +233,18 @@ function _buildCycleDatasets(states, satRows) {
   // 1→2: isentropic compression — vertical line at s = s1
   const path12 = [{ x: s1.s, y: s1.T_C }, { x: s1.s, y: s2.T_C }];
 
-  // 2→3: desuperheat → horizontal condensation at T_cond → optional subcool
-  const satT3 = _closestSatRow(satRows, s3.T_C);
-  const path23 = satT3
-    ? [
-        { x: s2.s,     y: s2.T_C  },
-        { x: satT3[5], y: s3.T_C  },  // dew point at T_cond
-        { x: satT3[4], y: s3.T_C  },  // bubble point at T_cond
-        { x: s3.s,     y: s3.T_C  },  // state 3 (subcooled if applicable)
-      ]
-    : [{ x: s2.s, y: s2.T_C }, { x: s3.s, y: s3.T_C }];
+  // 2→3: desuperheat → horizontal condensation at Tsat(P_cond) → optional subcool
+  const shelf = _satShelfAtP(satRows, s2.P_kPa);
+  let path23;
+  if (shelf) {
+    path23 = [{ x: s2.s, y: s2.T_C }];
+    // dew point only if state 2 is superheated (wet compression starts inside the dome)
+    if (s2.s > shelf.sg) path23.push({ x: shelf.sg, y: shelf.T });
+    path23.push({ x: shelf.sf, y: shelf.T });
+    path23.push({ x: s3.s, y: s3.T_C });  // state 3 (subcooled if applicable)
+  } else {
+    path23 = [{ x: s2.s, y: s2.T_C }, { x: s3.s, y: s3.T_C }];
+  }
 
   // 3→4: isenthalpic expansion (straight-line approximation in T-s)
   const path34 = [{ x: s3.s, y: s3.T_C }, { x: s4.s, y: s4.T_C }];
@@ -282,13 +284,22 @@ function _buildCycleDatasets(states, satRows) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function _closestSatRow(satRows, T_C) {
-  let best = null, bestDist = Infinity;
-  for (const r of satRows) {
-    const d = Math.abs(r[0] - T_C);
-    if (d < bestDist) { bestDist = d; best = r; }
+/** Condensation shelf (T, sf, sg) at pressure P, lerped from sat rows. */
+function _satShelfAtP(satRows, P_kPa) {
+  const n = satRows.length;
+  if (P_kPa < satRows[0][1] || P_kPa > satRows[n - 1][1]) return null;
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (satRows[mid][1] <= P_kPa) lo = mid; else hi = mid;
   }
-  return bestDist < 2.0 ? best : null;
+  const a = satRows[lo], b = satRows[hi];
+  const t = b[1] === a[1] ? 0 : (P_kPa - a[1]) / (b[1] - a[1]);
+  return {
+    T:  a[0] + t * (b[0] - a[0]),
+    sf: a[4] + t * (b[4] - a[4]),
+    sg: a[5] + t * (b[5] - a[5]),
+  };
 }
 
 function _buildOptions(bounds) {
@@ -325,7 +336,7 @@ function _buildOptions(bounds) {
         titleColor:      STYLE.tooltip.title,
         bodyColor:       STYLE.tooltip.body,
         padding:         10,
-        filter: ctx => ctx.datasetIndex >= 2,   // only state point dots
+        filter: ctx => ctx.dataset.label === 'States' || ctx.dataset.label === MARKER_LABEL,
         callbacks: {
           title: () => '',
           label(ctx) {

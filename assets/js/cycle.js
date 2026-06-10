@@ -16,7 +16,7 @@ export async function solveState(backend, inputPair, val1, val2) {
  * Compute the four VCRC states from user inputs.
  * Superheat/subcool are specified as ΔT from saturation; pressures are
  * derived internally (dew pressure at T_evap, bubble pressure at T_cond).
- * @param {object} backend  — tables.js (or coolprop.js) instance
+ * @param {object} backend  — property backend (tables.js)
  * @param {object} inputs   — { T1_C, T3_C, superheat: bool, dT_sh_K,
  *                              subcool: bool, dT_sc_K }
  * @returns {Promise<object[]>} Array of 4 state objects
