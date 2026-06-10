@@ -27,6 +27,7 @@ jobs:
           node-version: 22
       - name: Verify accuracy gates before deploying
         run: node tests/e2e.mjs
+      - run: node tests/units.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

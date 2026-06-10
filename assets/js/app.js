@@ -12,14 +12,22 @@ import {
   renderResults, showTranscritWarning, highlightRefCard,
   wireLookupControls, enableLookupButton, showLookupError,
   renderLookupState, renderLookupSat,
+  refreshUnitLabels, refreshLookupFields, onUnitToggle,
 } from "./ui.js";
 import { initTsChart, updateTsChart, clearCycleOverlay, setTsMarker } from "./chart.js";
+import * as units from "./units.js";
 
 let currentFluidKey = null;
+let currentInfo = null;
+// retained SI results so a unit toggle can re-render without recomputing
+let lastStates = null, lastMetrics = null, lastWarnings = null, lastNotes = null;
+let lastLookup = null;  // { kind: "state"|"sat", data, phaseLabel }
 
 async function init() {
   wireInputControls();
   wireLookupControls(handleLookup);
+  onUnitToggle(handleUnitToggle);
+  refreshUnitLabels();  // apply persisted unit system
   initTsChart();
 
   try {
@@ -59,6 +67,9 @@ async function selectFluid(key) {
   try {
     await backend.init(key);
     const info = await getRefrigerantInfo(key);
+    currentInfo = info;
+    lastStates = lastMetrics = lastWarnings = lastNotes = null;
+    lastLookup = null;
     const meta = backend.getFluidMeta(key);
     renderInfoPanel(key, info, meta);
     setRangeHint(meta);
@@ -108,26 +119,28 @@ async function handleCalc() {
     showError("State 3 (subcooled): enter subcooling ΔT ≥ 0 K."); return;
   }
 
-  // Range validation against fluid metadata (friendly, pre-backend)
+  // Range validation against fluid metadata (friendly, in display units)
   if (meta) {
     const T_hi = Math.min(meta.T_max_C, meta.T_crit_C - 0.5);
-    const range = `${currentFluidKey} saturation data covers ${meta.T_min_C} °C to ${T_hi.toFixed(1)} °C`;
+    const L = units.label("T");
+    const dt = v => units.toDisplay(v, "T").toFixed(1);
+    const range = `${currentFluidKey} saturation data covers ${dt(meta.T_min_C)} ${L} to ${dt(T_hi)} ${L}`;
     if (inputs.T1_C < meta.T_min_C || inputs.T1_C > T_hi) {
-      showError(`Evaporator temperature ${inputs.T1_C} °C out of range — ${range}.`); return;
+      showError(`Evaporator temperature ${dt(inputs.T1_C)} ${L} out of range — ${range}.`); return;
     }
     if (inputs.T3_C >= meta.T_crit_C) {
       showTranscritWarning(true);
-      showError(`Condensing temperature ${inputs.T3_C} °C is above the critical point ` +
-                `(${meta.T_crit_C} °C) — transcritical operation is not supported by the ` +
-                `subcritical cycle model. Choose T3 < ${T_hi.toFixed(1)} °C.`);
+      showError(`Condensing temperature ${dt(inputs.T3_C)} ${L} is above the critical point ` +
+                `(${dt(meta.T_crit_C)} ${L}) — transcritical operation is not supported by the ` +
+                `subcritical cycle model. Choose T3 < ${dt(T_hi)} ${L}.`);
       return;
     }
     showTranscritWarning(false);
     if (inputs.T3_C < meta.T_min_C || inputs.T3_C > T_hi) {
-      showError(`Condensing temperature ${inputs.T3_C} °C out of range — ${range}.`); return;
+      showError(`Condensing temperature ${dt(inputs.T3_C)} ${L} out of range — ${range}.`); return;
     }
     if (inputs.T3_C <= inputs.T1_C) {
-      showError(`Condensing temperature (${inputs.T3_C} °C) must exceed evaporator temperature (${inputs.T1_C} °C).`); return;
+      showError(`Condensing temperature (${dt(inputs.T3_C)} ${L}) must exceed evaporator temperature (${dt(inputs.T1_C)} ${L}).`); return;
     }
   }
 
@@ -138,6 +151,8 @@ async function handleCalc() {
     const states = await computeVCRCStates(backend, inputs);
     const metrics = analyzeVCRC(states);
     const { warnings, notes } = validateCycle(states);
+    lastStates = states; lastMetrics = metrics;
+    lastWarnings = warnings; lastNotes = notes;
 
     renderResults(states, metrics, warnings, notes);
     // Overlay cycle on T-s diagram
@@ -166,15 +181,42 @@ async function handleLookup(inp) {
   try {
     if (pair === "satT" || pair === "satP") {
       const sat = await backend.getSatProps(pair === "satT" ? "T" : "P", v1);
+      lastLookup = { kind: "sat", data: sat };
       renderLookupSat(sat);
       setTsMarker(null);
     } else {
       const st = await backend.getProps(pair, v1, v2);
-      renderLookupState(st, await _phaseLabel(st));
+      const phaseLabel = await _phaseLabel(st);
+      lastLookup = { kind: "state", data: st, phaseLabel };
+      renderLookupState(st, phaseLabel);
       setTsMarker({ x: st.s, y: st.T_C });
     }
   } catch (err) {
     showLookupError(err.message);
+  }
+}
+
+/** Switch SI ⇄ IP: relabel everything and re-render retained results. */
+function handleUnitToggle() {
+  units.setSystem(units.getSystem() === "SI" ? "IP" : "SI");
+  refreshUnitLabels();
+  refreshLookupFields();
+
+  const meta = currentFluidKey ? backend.getFluidMeta(currentFluidKey) : null;
+  if (meta) setRangeHint(meta);
+  if (currentInfo) renderInfoPanel(currentFluidKey, currentInfo, meta);
+  if (lastStates) renderResults(lastStates, lastMetrics, lastWarnings, lastNotes);
+  if (lastLookup) {
+    if (lastLookup.kind === "sat") renderLookupSat(lastLookup.data);
+    else renderLookupState(lastLookup.data, lastLookup.phaseLabel);
+  }
+  // rebuild chart so axis titles/ticks pick up the new labels
+  const satRows = currentFluidKey ? backend.getSatRows(currentFluidKey) : null;
+  if (satRows) {
+    updateTsChart(satRows, lastStates);
+    if (lastLookup && lastLookup.kind === "state") {
+      setTsMarker({ x: lastLookup.data.s, y: lastLookup.data.T_C });
+    }
   }
 }
 

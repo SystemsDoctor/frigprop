@@ -14,12 +14,13 @@
 > label-based tooltip filter), coolprop.js deleted (A9), README rewritten,
 > CI workflow (harness on push/PR) + Pages deploy workflow added (one-time
 > manual step: Settings → Pages → Source: GitHub Actions).
-> **All planned phases are done.** Post-launch round 1: layout rework
-> (gallery full-width on top, left column un-clipped), 13 added fluids
-> (27 total, incl. CFC/HCFO/naturals; low-pressure grid support), harness
-> at 221 cases. Phase 5 below (units toggle) is PLANNED, NOT implemented.
-> Remaining stretch goals: transcritical R744 gas-cooler model (C5b),
-> constant-h expansion curve on the T-s diagram (A6, low priority).
+> **All planned phases are done, including Phase 5 (units toggle).**
+> Post-launch round 1: layout rework (gallery full-width on top, left column
+> un-clipped), 13 added fluids (27 total), harness at 221 cases + unit
+> conversion checks. Round 2 (v1.1): property tooltips, T-s zoom buttons,
+> evaporator isobar path fix, energy-balance row removed, SI⇄US toggle
+> implemented per Phase 5, version tag in nav.
+> Future work: see section G (stretch goals).
 
 ---
 
@@ -62,6 +63,44 @@ Steps:
 Acceptance: toggling converts all visible numbers/labels (cycle inputs,
 state table, performance, lookup pane, info panel, range hints, T-s axes)
 with no backend value drift; choice persists across reloads.
+
+> Status: implemented in v1.1 as planned (`assets/js/units.js`,
+> `tests/units.mjs`, nav toggle). Reference-state strings stay SI (they are
+> convention definitions, not measurements).
+
+---
+
+## G. Stretch goals (future versions, roughly prioritized)
+
+1. **Isentropic efficiency input** — η_isen slider/field for the compressor
+   (h2 = h1 + (h2s − h1)/η); the single biggest realism upgrade and pure
+   `cycle.js` math. Could extend to suction/discharge line losses later.
+2. **Transcritical R-744 gas-cooler cycle** (PLAN C5b) — gas-cooler pressure
+   + exit-temperature inputs, optimum-pressure hint; needs supercritical
+   table coverage above P_crit (schema supports adding P columns).
+3. **P-h diagram** — second chart tab; practitioners think in log-P/h.
+   Dome + isotherms from existing tables; cycle is a clean rectangle-ish loop.
+4. **Side-by-side refrigerant comparison** — run the same cycle inputs across
+   2–4 selected fluids, table of COP/W/Q/pressure ratio/discharge T, bar
+   highlights; the gallery layout already supports multi-select affordance.
+5. **Volumetric metrics** — volumetric cooling capacity (kJ/m³ from ρ₁·q_evap)
+   and compressor displacement estimate per kW; needs only existing data.
+6. **Cycle export & sharing** — copy state table as CSV, download T-s chart
+   PNG (Chart.js `toBase64Image`), and URL query params encoding
+   fluid+inputs+units so a configured cycle is linkable.
+7. **Constant-h expansion curve** on the T-s diagram (A6 leftover) — replace
+   the straight 3→4 segment with the true isenthalp from the tables.
+8. **Internal heat exchanger (IHX/economizer) option** — suction-line HX
+   effectiveness input coupling superheat and subcooling.
+9. **Two-stage / cascade cycle builder** — intercooler pressure optimization,
+   cascade pairs (e.g. R-744/R-717, R-23/R-134a); larger `cycle.js` rework.
+10. **Glide-aware coil profiles** — for zeotropes, show dew/bubble entry/exit
+    temperatures in the results (sensible next step from the existing
+    bubble/dew table columns).
+11. **PWA/offline support** — service worker caching tables; the app is
+    fully static so this is mostly manifest + cache plumbing.
+12. **Accessibility & i18n pass** — keyboard navigation for the card gallery,
+    ARIA labels on results, optional locale number formatting.
 
 Goal: a GitHub-Pages-hosted interactive page where a user (1) selects a modern
 refrigerant from a card gallery, (2) sees regulatory / applications /
