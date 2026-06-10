@@ -59,8 +59,8 @@ for (const c of truth.cycles) {
     await backend.init(c.fluid);
     const inputs = {
       T1_C: c.Te, T3_C: c.Tc,
-      superheat: c.sh > 0, T1sh_C: c.Te + c.sh, P1sh_kPa: w.P1_kPa,
-      subcool: c.sc > 0, T3sc_C: c.Tc - c.sc, P3sc_kPa: w.P2_kPa,
+      superheat: c.sh > 0, dT_sh_K: c.sh,
+      subcool: c.sc > 0, dT_sc_K: c.sc,
     };
     const states = await computeVCRCStates(backend, inputs);
     const m = analyzeVCRC(states);

@@ -77,10 +77,10 @@
           </label>
           <div id="sh-inlet-extra" class="extra-fields hidden">
             <div class="form-row" style="margin-top:10px">
-              <label for="P1sh">Inlet Pressure</label>
+              <label for="dT-sh">Superheat above saturation</label>
               <div class="input-group">
-                <input type="number" id="P1sh" step="1" placeholder="e.g. 200">
-                <span class="input-unit">kPa</span>
+                <input type="number" id="dT-sh" step="0.5" min="0" placeholder="e.g. 5">
+                <span class="input-unit">K</span>
               </div>
             </div>
           </div>
@@ -120,10 +120,10 @@
           </label>
           <div id="sc-exit-extra" class="extra-fields hidden">
             <div class="form-row" style="margin-top:10px">
-              <label for="P3sc">Condenser Pressure</label>
+              <label for="dT-sc">Subcooling below saturation</label>
               <div class="input-group">
-                <input type="number" id="P3sc" step="1" placeholder="e.g. 1200">
-                <span class="input-unit">kPa</span>
+                <input type="number" id="dT-sc" step="0.5" min="0" placeholder="e.g. 5">
+                <span class="input-unit">K</span>
               </div>
             </div>
           </div>
@@ -143,11 +143,14 @@
           </div>
         </div>
 
+        <div id="range-hint" class="range-hint"></div>
+
         <button id="calc-btn" class="calc-btn" disabled>Calculate Cycle</button>
       </div>
 
       <!-- Warnings & notices -->
       <div id="warnings-box" class="alert-box alert-warn hidden"></div>
+      <div id="notes-box" class="alert-box alert-info hidden"></div>
       <div id="transcrit-notice" class="alert-box alert-transcrit hidden">
         ⚠ Condensing temperature exceeds critical point — transcritical operation.
       </div>
@@ -168,6 +171,7 @@
                 <th>P <span class="th-unit">kPa</span></th>
                 <th>h <span class="th-unit">kJ/kg</span></th>
                 <th>s <span class="th-unit">kJ/kg·K</span></th>
+                <th>u <span class="th-unit">kJ/kg</span></th>
                 <th>x</th>
                 <th>ρ <span class="th-unit">kg/m³</span></th>
               </tr>

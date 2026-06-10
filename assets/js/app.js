@@ -7,7 +7,7 @@ import { computeVCRCStates, analyzeVCRC, validateCycle } from "./cycle.js";
 import { getRefrigerantList, getRefrigerantInfo } from "./refrigerants.js";
 import {
   setStatus, populateRefrigerantSelector, onRefrigerantChange,
-  renderInfoPanel, wireInputControls, getInputs,
+  renderInfoPanel, wireInputControls, getInputs, setRangeHint,
   enableCalcButton, onCalcClick, showError, clearError,
   renderResults, showTranscritWarning, highlightRefCard,
 } from "./ui.js";
@@ -57,6 +57,7 @@ async function selectFluid(key) {
     const info = await getRefrigerantInfo(key);
     const meta = backend.getFluidMeta(key);
     renderInfoPanel(key, info, meta);
+    setRangeHint(meta);
     highlightRefCard(key, info);
     setStatus("ready", `Ready — ${key}`);
     enableCalcButton(true);
@@ -82,19 +83,43 @@ async function handleCalc() {
   if (!currentFluidKey) return;
 
   const inputs = getInputs();
+  const meta = backend.getFluidMeta(currentFluidKey);
 
   // Validate inputs
-  if (!inputs.superheat && isNaN(inputs.T1_C)) {
+  if (isNaN(inputs.T1_C)) {
     showError("State 1: enter evaporator temperature (T1)."); return;
   }
-  if (inputs.superheat && (isNaN(inputs.T1sh_C) || isNaN(inputs.P1sh_kPa))) {
-    showError("State 1 (superheated): enter both T and P."); return;
+  if (inputs.superheat && (isNaN(inputs.dT_sh_K) || inputs.dT_sh_K < 0)) {
+    showError("State 1 (superheated): enter superheat ΔT ≥ 0 K."); return;
   }
-  if (!inputs.subcool && isNaN(inputs.T3_C)) {
+  if (isNaN(inputs.T3_C)) {
     showError("State 3: enter condensing temperature (T3)."); return;
   }
-  if (inputs.subcool && (isNaN(inputs.T3sc_C) || isNaN(inputs.P3sc_kPa))) {
-    showError("State 3 (subcooled): enter both T and P."); return;
+  if (inputs.subcool && (isNaN(inputs.dT_sc_K) || inputs.dT_sc_K < 0)) {
+    showError("State 3 (subcooled): enter subcooling ΔT ≥ 0 K."); return;
+  }
+
+  // Range validation against fluid metadata (friendly, pre-backend)
+  if (meta) {
+    const T_hi = Math.min(meta.T_max_C, meta.T_crit_C - 0.5);
+    const range = `${currentFluidKey} saturation data covers ${meta.T_min_C} °C to ${T_hi.toFixed(1)} °C`;
+    if (inputs.T1_C < meta.T_min_C || inputs.T1_C > T_hi) {
+      showError(`Evaporator temperature ${inputs.T1_C} °C out of range — ${range}.`); return;
+    }
+    if (inputs.T3_C >= meta.T_crit_C) {
+      showTranscritWarning(true);
+      showError(`Condensing temperature ${inputs.T3_C} °C is above the critical point ` +
+                `(${meta.T_crit_C} °C) — transcritical operation is not supported by the ` +
+                `subcritical cycle model. Choose T3 < ${T_hi.toFixed(1)} °C.`);
+      return;
+    }
+    showTranscritWarning(false);
+    if (inputs.T3_C < meta.T_min_C || inputs.T3_C > T_hi) {
+      showError(`Condensing temperature ${inputs.T3_C} °C out of range — ${range}.`); return;
+    }
+    if (inputs.T3_C <= inputs.T1_C) {
+      showError(`Condensing temperature (${inputs.T3_C} °C) must exceed evaporator temperature (${inputs.T1_C} °C).`); return;
+    }
   }
 
   setStatus("working", "Calculating…");
@@ -103,18 +128,9 @@ async function handleCalc() {
   try {
     const states = await computeVCRCStates(backend, inputs);
     const metrics = analyzeVCRC(states);
-    const { warnings } = validateCycle(states);
+    const { warnings, notes } = validateCycle(states);
 
-    // Transcritical check for R-744
-    const meta = backend.getFluidMeta(currentFluidKey);
-    let transcrit = false;
-    if (meta && meta.T_crit_C !== undefined) {
-      const T3 = inputs.subcool ? inputs.T3sc_C : inputs.T3_C;
-      transcrit = T3 >= meta.T_crit_C;
-    }
-    showTranscritWarning(transcrit);
-
-    renderResults(states, metrics, warnings);
+    renderResults(states, metrics, warnings, notes);
     // Overlay cycle on T-s diagram
     const satRows = backend.getSatRows(currentFluidKey);
     if (satRows) updateTsChart(satRows, states);

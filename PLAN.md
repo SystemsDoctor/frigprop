@@ -1,12 +1,14 @@
 # FrigProp — Review Findings & Implementation Plan
 
-> **Status:** Phase 1 (section B) and Phase 4.1 (harness) complete.
-> Schema v2 ΔT-grids + `tables.js` rewrite fixed A1–A4. Harness:
-> `scripts/gen_truth.py` → `tests/truth.json` (committed) → `node tests/e2e.mjs`
-> runs 117 cycle+props cases without Python; all pass. `validate_tables.py`
-> retired (A8). Additions beyond plan: log-P interpolation, geometric ρ
-> interpolation, glide-aware bubble/dew pressures (`P_bub`/`P_dew`).
-> Next: Phase 2 (cycle pane), then Phase 3 (lookup pane).
+> **Status:** Phases 1 (section B), 4.1 (harness), and 2 (section C) complete.
+> Schema v2 ΔT-grids + `tables.js` rewrite fixed A1–A4; harness
+> (`node tests/e2e.mjs`, 117 cases, no Python) passes; `validate_tables.py`
+> retired (A8). Phase 2: ΔT-based superheat/subcool inputs (A7), manifest
+> range validation + transcritical guard (A5/C5a), u column in results,
+> wet-compression info note (C4). Additions beyond plan: log-P interpolation,
+> geometric ρ interpolation, glide-aware bubble/dew pressures.
+> Next: Phase 3 (property lookup pane), then Phase 4.2–4.4 (deploy, README,
+> chart fixes A6, delete coolprop.js).
 
 Goal: a GitHub-Pages-hosted interactive page where a user (1) selects a modern
 refrigerant from a card gallery, (2) sees regulatory / applications /

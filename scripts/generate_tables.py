@@ -7,7 +7,6 @@ import math
 from datetime import datetime, timezone
 
 import CoolProp.CoolProp as CP
-import numpy as np
 import orjson
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "tables")
@@ -191,16 +190,6 @@ def generate_sat_table(fluid_key, cp_name, T_min_C, T_max_C, T_crit_C):
         "columns": ["T", "P_sat", "hf", "hg", "sf", "sg", "rhof", "rhog", "uf", "ug", "P_bub", "P_dew"],
         "rows": rows,
     }
-
-
-def get_T_sat_from_P(cp_name, P_kPa):
-    try:
-        T_K = CP.PropsSI("T", "P", P_kPa * 1000.0, "Q", 0.5, cp_name)
-        if math.isfinite(T_K):
-            return T_K - 273.15
-    except Exception:
-        pass
-    return None
 
 
 def _props_at(cp_name, T_K, P_Pa, dT, Q_at_sat):
