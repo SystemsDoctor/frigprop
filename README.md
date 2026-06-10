@@ -4,7 +4,7 @@ Interactive refrigerant property lookup and vapor-compression refrigeration
 cycle (VCRC) analysis. Runs entirely in-browser — static files, no server,
 no build step.
 
-**Live tool:** https://SystemsDoctor.github.io/frigprop
+**Live tool:** https://www.frigprop.com
 
 ## Features
 
