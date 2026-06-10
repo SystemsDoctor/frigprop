@@ -369,6 +369,13 @@ nav {
    Cycle analysis — state sections
    ========================================================= */
 
+.range-hint {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  margin: 8px 0 2px;
+  font-family: var(--mono);
+}
+
 .calc-body {
   padding: 14px 16px;
   display: flex;
@@ -622,6 +629,7 @@ nav {
 }
 
 .alert-warn     { background: rgba(255,165,2,.07);  border-color: var(--warn);    color: var(--warn); }
+.alert-info     { background: rgba(0,212,255,.06);  border-color: var(--accent);  color: var(--accent); }
 .alert-transcrit{ background: rgba(255,107,53,.07); border-color: var(--accent2); color: var(--accent2); }
 .alert-error    { background: rgba(255,71,87,.07);  border-color: var(--danger);  color: var(--danger); }
 

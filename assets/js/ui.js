@@ -190,12 +190,19 @@ export function getInputs() {
     T1_C:     parseFloat($("T1").value),
     T3_C:     parseFloat($("T3").value),
     superheat: $("sh-inlet").checked,
-    T1sh_C:   parseFloat($("T1").value),
-    P1sh_kPa: parseFloat($("P1sh").value),
+    dT_sh_K:  parseFloat($("dT-sh").value),
     subcool:  $("sc-exit").checked,
-    T3sc_C:   parseFloat($("T3").value),
-    P3sc_kPa: parseFloat($("P3sc").value),
+    dT_sc_K:  parseFloat($("dT-sc").value),
   };
+}
+
+/** Show the selected fluid's valid temperature range under the inputs. */
+export function setRangeHint(meta) {
+  const el = $("range-hint");
+  if (!el) return;
+  if (!meta) { el.textContent = ""; return; }
+  const T_hi = Math.min(meta.T_max_C, meta.T_crit_C - 0.5);
+  el.textContent = `Saturation data: ${meta.T_min_C} °C to ${T_hi.toFixed(1)} °C · critical point ${meta.T_crit_C} °C`;
 }
 
 export function enableCalcButton(enabled) {
@@ -216,6 +223,8 @@ export function showError(msg) {
   box.classList.remove("hidden");
   $("results-section").classList.add("hidden");
   $("warnings-box").classList.add("hidden");
+  const nbox = $("notes-box");
+  if (nbox) nbox.classList.add("hidden");
 }
 
 export function clearError() {
@@ -238,7 +247,7 @@ function fmtX(x) {
   return `<span class="val-x-twophase">${fmt(x, 3)}</span>`;
 }
 
-export function renderResults(states, metrics, warnings) {
+export function renderResults(states, metrics, warnings, notes) {
   clearError();
 
   const wbox = $("warnings-box");
@@ -248,6 +257,16 @@ export function renderResults(states, metrics, warnings) {
     wbox.classList.remove("hidden");
   } else {
     wbox.classList.add("hidden");
+  }
+
+  const nbox = $("notes-box");
+  if (nbox) {
+    if (notes && notes.length) {
+      nbox.innerHTML = notes.map(n => `<div>ⓘ ${n}</div>`).join("");
+      nbox.classList.remove("hidden");
+    } else {
+      nbox.classList.add("hidden");
+    }
   }
 
   const tbody = $("results-tbody");
@@ -267,6 +286,7 @@ export function renderResults(states, metrics, warnings) {
       <td>${fmt(s.P_kPa, 2)}</td>
       <td>${fmt(s.h, 2)}</td>
       <td>${fmt(s.s, 4)}</td>
+      <td>${fmt(s.u, 2)}</td>
       <td>${fmtX(s.x)}</td>
       <td>${fmt(s.rho, 3)}</td>
     `;

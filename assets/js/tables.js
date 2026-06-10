@@ -232,9 +232,17 @@ function _rowAtP(table, rowIdx, P_kPa) {
     const v0 = table.grid[prop][rowIdx][j0];
     const v1 = table.grid[prop][rowIdx][j1];
     if (v0 === null || v1 === null) return null;
-    out[prop] = v0 + t * (v1 - v0);
+    out[prop] = _lerpProp(prop, v0, v1, t);
   }
   return out;
+}
+
+/** ρ scales ~P along an isotherm — interpolate it geometrically in P. */
+function _lerpProp(prop, v0, v1, t) {
+  if (prop === "rho" && v0 > 0 && v1 > 0) {
+    return v0 * Math.pow(v1 / v0, t);
+  }
+  return v0 + t * (v1 - v0);
 }
 
 /** Bilinear interpolation at (ΔT, P). Throws with the valid range on miss. */
@@ -261,8 +269,10 @@ function _gridLookup(table, dT, P_kPa) {
     if (v00 === null || v01 === null || v10 === null || v11 === null) {
       throw new Error(`State ΔT=${dT.toFixed(1)} K, P=${P_kPa} kPa outside ${table.type} table coverage`);
     }
-    result[prop] = (v00 * (1 - tT) + v10 * tT) * (1 - tP) +
-                   (v01 * (1 - tT) + v11 * tT) * tP;
+    // linear in ΔT, then property-appropriate interpolation in P
+    const a = v00 + tT * (v10 - v00);
+    const b = v01 + tT * (v11 - v01);
+    result[prop] = _lerpProp(prop, a, b, tP);
   }
   return result;
 }

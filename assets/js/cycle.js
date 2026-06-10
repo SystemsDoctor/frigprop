@@ -14,33 +14,30 @@ export async function solveState(backend, inputPair, val1, val2) {
 
 /**
  * Compute the four VCRC states from user inputs.
+ * Superheat/subcool are specified as ΔT from saturation; pressures are
+ * derived internally (dew pressure at T_evap, bubble pressure at T_cond).
  * @param {object} backend  — tables.js (or coolprop.js) instance
- * @param {object} inputs   — { T1_C, T3_C, superheat: bool, T1sh_C, P1sh_kPa,
- *                              subcool: bool, T3sc_C, P3sc_kPa }
+ * @param {object} inputs   — { T1_C, T3_C, superheat: bool, dT_sh_K,
+ *                              subcool: bool, dT_sc_K }
  * @returns {Promise<object[]>} Array of 4 state objects
  */
 export async function computeVCRCStates(backend, inputs) {
-  const { T1_C, T3_C, superheat: shInlet, T1sh_C, P1sh_kPa,
-          subcool: scExit, T3sc_C, P3sc_kPa } = inputs;
+  const { T1_C, T3_C, superheat: shInlet, dT_sh_K, subcool: scExit, dT_sc_K } = inputs;
 
-  // State 1 — compressor inlet
-  let state1;
-  if (shInlet) {
-    state1 = await backend.getProps("TP", T1sh_C, P1sh_kPa);
-  } else {
-    state1 = await backend.getProps("TQ", T1_C, 1.0);
-  }
+  // State 1 — compressor inlet at evaporator (dew) pressure
+  const satVap = await backend.getProps("TQ", T1_C, 1.0);
+  const state1 = (shInlet && dT_sh_K > 0)
+    ? await backend.getProps("TP", T1_C + dT_sh_K, satVap.P_kPa)
+    : satVap;
 
-  // State 3 — condenser exit
-  let state3;
-  if (scExit) {
-    state3 = await backend.getProps("TP", T3sc_C, P3sc_kPa);
-  } else {
-    state3 = await backend.getProps("TQ", T3_C, 0.0);
-  }
+  // State 3 — condenser exit at condenser (bubble) pressure
+  const satLiq = await backend.getProps("TQ", T3_C, 0.0);
+  const state3 = (scExit && dT_sc_K > 0)
+    ? await backend.getProps("TP", T3_C - dT_sc_K, satLiq.P_kPa)
+    : satLiq;
 
-  const P_cond = state3.P_kPa;
-  const P_evap = state1.P_kPa;
+  const P_cond = satLiq.P_kPa;
+  const P_evap = satVap.P_kPa;
 
   // State 2 — isentropic compression to P_cond
   const state2 = await backend.getProps("PS", P_cond, state1.s);
@@ -69,22 +66,29 @@ export function analyzeVCRC(states) {
 /**
  * Sanity-check a set of 4 computed states.
  * @param {object[]} states
- * @returns {{ valid: boolean, warnings: string[] }}
+ * @returns {{ valid: boolean, warnings: string[], notes: string[] }}
  */
 export function validateCycle(states) {
   const [s1, s2, s3, s4] = states;
   const warnings = [];
+  const notes = [];
 
-  if (s2.s < s1.s - 0.001) warnings.push("State 2 entropy < State 1 entropy (non-physical compression).");
   if (s2.h <= s1.h) warnings.push("Compressor work is zero or negative (h2 ≤ h1).");
   if (s3.h >= s2.h) warnings.push("Condenser shows no heat rejection (h3 ≥ h2).");
   if (Math.abs(s4.h - s3.h) > 0.1) warnings.push(`Expansion process is not isenthalpic (|h4−h3| = ${Math.abs(s4.h - s3.h).toFixed(3)} kJ/kg).`);
   if (s2.P_kPa <= s1.P_kPa) warnings.push("Condensing pressure is not higher than evaporating pressure.");
   if (s4.x !== null && (s4.x < 0 || s4.x > 1)) warnings.push(`Post-expansion quality out of range: x4 = ${s4.x !== null ? s4.x.toFixed(3) : 'N/A'}.`);
 
+  // Dry fluids (R600a, R1234yf, …): isentropic compression from saturated
+  // vapor genuinely ends inside the dome — informational, not an error.
+  if (s2.x !== null && s2.x < 1) {
+    notes.push(`Isentropic compression ends two-phase for this fluid (x2 = ${s2.x.toFixed(3)}). ` +
+               `Real systems avoid wet compression with suction superheat.`);
+  }
+
   const P_evap = s1.P_kPa;
   const P_cond = s2.P_kPa;
   if (P_cond / P_evap > 10) warnings.push(`Very high pressure ratio: ${(P_cond / P_evap).toFixed(1)}. Consider two-stage compression.`);
 
-  return { valid: warnings.length === 0, warnings };
+  return { valid: warnings.length === 0, warnings, notes };
 }
