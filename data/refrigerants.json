@@ -1,282 +1,748 @@
 {
-  "R32": {
-    "ashrae_designation": "R-32",
-    "chemical_name": "Difluoromethane",
-    "formula": "CH2F2",
-    "molecular_weight": 52.02,
-    "safety_class": "A2L",
-    "GWP_AR4": 675,
-    "GWP_AR5": 677,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -51.7,
-    "T_crit_C": 78.1,
-    "P_crit_kPa": 5782.6,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "HFC",
-    "regulatory_status": "Acceptable under EPA SNAP; lower GWP alternative under F-Gas phasedown",
-    "typical_applications": ["residential AC", "heat pumps", "light commercial refrigeration"],
-    "replaces": ["R-410A"],
-    "replaced_by": []
-  },
-  "R1234yf": {
-    "ashrae_designation": "R-1234yf",
-    "chemical_name": "2,3,3,3-Tetrafluoropropene",
-    "formula": "CF3CF=CH2",
-    "molecular_weight": 114.04,
-    "safety_class": "A2L",
-    "GWP_AR4": 4,
-    "GWP_AR5": 1,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -29.4,
-    "T_crit_C": 94.7,
-    "P_crit_kPa": 3382.2,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "HFO",
-    "regulatory_status": "Mandated for automotive AC in EU (MAC Directive); EPA SNAP acceptable",
-    "typical_applications": ["automotive AC", "light commercial refrigeration"],
-    "replaces": ["R-134a"],
-    "replaced_by": []
-  },
-  "R1234ze": {
-    "ashrae_designation": "R-1234ze(E)",
-    "chemical_name": "trans-1,3,3,3-Tetrafluoropropene",
-    "formula": "trans-CHF=CHCF3",
-    "molecular_weight": 114.04,
-    "safety_class": "A2L",
-    "GWP_AR4": 6,
-    "GWP_AR5": 1,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -19.0,
-    "T_crit_C": 109.4,
-    "P_crit_kPa": 3635.0,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "HFO",
-    "regulatory_status": "EPA SNAP acceptable; F-Gas phasedown compliant (GWP < 150); replacing R-134a in chillers",
-    "typical_applications": ["centrifugal chillers", "low-pressure refrigeration", "foam blowing agent"],
-    "replaces": ["R-134a", "R-245fa"],
-    "replaced_by": []
-  },
-  "R454B": {
-    "ashrae_designation": "R-454B",
-    "chemical_name": "R-32/R-1234yf blend (Opteon™ XL41)",
-    "formula": "R-32/R-1234yf (68.9/31.1 wt%)",
-    "molecular_weight": 62.6,
-    "safety_class": "A2L",
-    "GWP_AR4": 467,
-    "GWP_AR5": 467,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -51.5,
-    "T_crit_C": 75.6,
-    "P_crit_kPa": 4637.0,
-    "T_glide_C": 1.0,
-    "blend_components": ["R-32", "R-1234yf"],
-    "refrigerant_type": "HFO blend",
-    "regulatory_status": "EPA SNAP acceptable (2019); F-Gas phasedown compliant; leading R-410A replacement",
-    "typical_applications": ["residential AC", "heat pumps", "light commercial AC"],
-    "replaces": ["R-410A"],
-    "replaced_by": []
-  },
-  "R452B": {
-    "ashrae_designation": "R-452B",
-    "chemical_name": "R-32/R-125/R-1234yf blend (Solstice® L41y)",
-    "formula": "R-32/R-125/R-1234yf (67/7/26 wt%)",
-    "molecular_weight": 63.5,
-    "safety_class": "A2L",
-    "GWP_AR4": 676,
-    "GWP_AR5": 676,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -51.3,
-    "T_crit_C": 71.8,
-    "P_crit_kPa": 4671.0,
-    "T_glide_C": 1.0,
-    "blend_components": ["R-32", "R-125", "R-1234yf"],
-    "refrigerant_type": "HFO blend",
-    "regulatory_status": "EPA SNAP acceptable; F-Gas phasedown compliant; R-410A replacement in new equipment",
-    "typical_applications": ["residential AC", "heat pumps", "commercial refrigeration"],
-    "replaces": ["R-410A"],
-    "replaced_by": []
-  },
-  "R134a": {
-    "ashrae_designation": "R-134a",
-    "chemical_name": "1,1,1,2-Tetrafluoroethane",
-    "formula": "CH2FCF3",
-    "molecular_weight": 102.03,
-    "safety_class": "A1",
-    "GWP_AR4": 1430,
-    "GWP_AR5": 1300,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -26.4,
-    "T_crit_C": 101.1,
-    "P_crit_kPa": 4059.3,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "HFC",
-    "regulatory_status": "F-Gas phasedown (EU); EPA SNAP acceptable with restrictions",
-    "typical_applications": ["automotive AC", "medium-temp refrigeration", "chillers"],
-    "replaces": ["R-12"],
-    "replaced_by": ["R-1234yf", "R-1234ze(E)", "R-152a"]
-  },
-  "R410A": {
-    "ashrae_designation": "R-410A",
-    "chemical_name": "Difluoromethane / Pentafluoroethane blend",
-    "formula": "R-32/R-125 (50/50 wt%)",
-    "molecular_weight": 72.58,
-    "safety_class": "A1",
-    "GWP_AR4": 2088,
-    "GWP_AR5": 1924,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -51.6,
-    "T_crit_C": 71.3,
-    "P_crit_kPa": 4901.2,
-    "T_glide_C": 0.1,
-    "blend_components": ["R-32", "R-125"],
-    "refrigerant_type": "HFC blend",
-    "regulatory_status": "F-Gas phasedown (EU); phase-down underway in developed markets",
-    "typical_applications": ["residential AC", "light commercial AC", "heat pumps"],
-    "replaces": ["R-22"],
-    "replaced_by": ["R-32", "R-454B", "R-452B"]
-  },
-  "R407C": {
-    "ashrae_designation": "R-407C",
-    "chemical_name": "HFC blend",
-    "formula": "R-32/R-125/R-134a (23/25/52 wt%)",
-    "molecular_weight": 86.20,
-    "safety_class": "A1",
-    "GWP_AR4": 1774,
-    "GWP_AR5": 1624,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -43.6,
-    "T_crit_C": 86.2,
-    "P_crit_kPa": 4631.7,
-    "T_glide_C": 7.0,
-    "blend_components": ["R-32", "R-125", "R-134a"],
-    "refrigerant_type": "HFC blend",
-    "regulatory_status": "F-Gas phasedown (EU); used as R-22 retrofit in existing systems",
-    "typical_applications": ["commercial AC", "chillers", "R-22 retrofit applications"],
-    "replaces": ["R-22"],
-    "replaced_by": ["R-32", "R-454B"]
-  },
-  "R404A": {
-    "ashrae_designation": "R-404A",
-    "chemical_name": "HFC blend",
-    "formula": "R-125/R-143a/R-134a (44/52/4 wt%)",
-    "molecular_weight": 97.60,
-    "safety_class": "A1",
-    "GWP_AR4": 3922,
-    "GWP_AR5": 3943,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -46.6,
-    "T_crit_C": 72.1,
-    "P_crit_kPa": 3734.8,
-    "T_glide_C": 0.5,
-    "blend_components": ["R-125", "R-143a", "R-134a"],
-    "refrigerant_type": "HFC blend",
-    "regulatory_status": "F-Gas phasedown (EU); high GWP, being replaced in new equipment",
-    "typical_applications": ["commercial refrigeration", "transport refrigeration", "low-temp refrigeration"],
-    "replaces": ["R-502", "R-22"],
-    "replaced_by": ["R-448A", "R-449A", "R-452A"]
-  },
-  "R22": {
-    "ashrae_designation": "R-22",
-    "chemical_name": "Chlorodifluoromethane",
-    "formula": "CHClF2",
-    "molecular_weight": 86.47,
-    "safety_class": "A1",
-    "GWP_AR4": 1810,
-    "GWP_AR5": 1760,
-    "ODP": 0.055,
-    "normal_boiling_point_C": -40.8,
-    "T_crit_C": 96.2,
-    "P_crit_kPa": 4990.0,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "HCFC",
-    "regulatory_status": "Phased out in developed countries (Montreal Protocol); servicing ban in EU since 2015; US production/import ban since 2020",
-    "typical_applications": ["legacy AC", "legacy refrigeration", "legacy heat pumps"],
-    "replaces": ["R-12"],
-    "replaced_by": ["R-410A", "R-407C", "R-32"]
-  },
-  "R290": {
-    "ashrae_designation": "R-290",
-    "chemical_name": "Propane",
-    "formula": "C3H8",
-    "molecular_weight": 44.10,
-    "safety_class": "A3",
-    "GWP_AR4": 3,
-    "GWP_AR5": 3,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -42.1,
-    "T_crit_C": 96.7,
-    "P_crit_kPa": 4251.2,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "natural",
-    "regulatory_status": "Exempt from F-Gas regulations; EPA SNAP acceptable with charge limits; increasingly mandated in EU",
-    "typical_applications": ["small commercial refrigeration", "heat pumps (low charge)", "domestic appliances", "vending machines"],
-    "replaces": ["R-22", "R-404A"],
-    "replaced_by": []
-  },
-  "R600a": {
-    "ashrae_designation": "R-600a",
-    "chemical_name": "Isobutane",
-    "formula": "(CH3)3CH",
-    "molecular_weight": 58.12,
-    "safety_class": "A3",
-    "GWP_AR4": 3,
-    "GWP_AR5": 3,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -11.7,
-    "T_crit_C": 134.7,
-    "P_crit_kPa": 3629.0,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "natural",
-    "regulatory_status": "Exempt from F-Gas regulations; EPA SNAP acceptable with charge limits; dominant in EU domestic appliances",
-    "typical_applications": ["domestic refrigerators", "chest freezers", "small commercial display cabinets"],
-    "replaces": ["R-134a", "R-12"],
-    "replaced_by": []
-  },
-  "R744": {
-    "ashrae_designation": "R-744",
-    "chemical_name": "Carbon Dioxide",
-    "formula": "CO2",
-    "molecular_weight": 44.01,
-    "safety_class": "A1",
-    "GWP_AR4": 1,
-    "GWP_AR5": 1,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -78.4,
-    "T_crit_C": 31.0,
-    "P_crit_kPa": 7377.3,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "natural",
-    "regulatory_status": "Exempt from F-Gas regulations; GWP=1 reference substance",
-    "typical_applications": ["supermarket refrigeration", "heat pump water heaters", "automotive AC (transcritical)", "industrial refrigeration"],
-    "replaces": [],
-    "replaced_by": []
-  },
-  "R717": {
-    "ashrae_designation": "R-717",
-    "chemical_name": "Ammonia",
-    "formula": "NH3",
-    "molecular_weight": 17.03,
-    "safety_class": "B2L",
-    "GWP_AR4": 0,
-    "GWP_AR5": 0,
-    "ODP": 0.0,
-    "normal_boiling_point_C": -33.3,
-    "T_crit_C": 132.4,
-    "P_crit_kPa": 11363.4,
-    "T_glide_C": 0.0,
-    "blend_components": null,
-    "refrigerant_type": "natural",
-    "regulatory_status": "Exempt from F-Gas regulations; requires special handling due to toxicity/flammability",
-    "typical_applications": ["industrial refrigeration", "cold storage warehouses", "ice rinks", "food processing"],
-    "replaces": [],
-    "replaced_by": []
-  }
+ "R32": {
+  "ashrae_designation": "R-32",
+  "chemical_name": "Difluoromethane",
+  "formula": "CH2F2",
+  "molecular_weight": 52.02,
+  "safety_class": "A2L",
+  "GWP_AR4": 675,
+  "GWP_AR5": 677,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -51.7,
+  "T_crit_C": 78.1,
+  "P_crit_kPa": 5782.6,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HFC",
+  "regulatory_status": "Acceptable under EPA SNAP; lower GWP alternative under F-Gas phasedown",
+  "typical_applications": [
+   "residential AC",
+   "heat pumps",
+   "light commercial refrigeration"
+  ],
+  "replaces": [
+   "R-410A"
+  ],
+  "replaced_by": []
+ },
+ "R1234yf": {
+  "ashrae_designation": "R-1234yf",
+  "chemical_name": "2,3,3,3-Tetrafluoropropene",
+  "formula": "CF3CF=CH2",
+  "molecular_weight": 114.04,
+  "safety_class": "A2L",
+  "GWP_AR4": 4,
+  "GWP_AR5": 1,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -29.4,
+  "T_crit_C": 94.7,
+  "P_crit_kPa": 3382.2,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HFO",
+  "regulatory_status": "Mandated for automotive AC in EU (MAC Directive); EPA SNAP acceptable",
+  "typical_applications": [
+   "automotive AC",
+   "light commercial refrigeration"
+  ],
+  "replaces": [
+   "R-134a"
+  ],
+  "replaced_by": []
+ },
+ "R1234ze": {
+  "ashrae_designation": "R-1234ze(E)",
+  "chemical_name": "trans-1,3,3,3-Tetrafluoropropene",
+  "formula": "trans-CHF=CHCF3",
+  "molecular_weight": 114.04,
+  "safety_class": "A2L",
+  "GWP_AR4": 6,
+  "GWP_AR5": 1,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -19.0,
+  "T_crit_C": 109.4,
+  "P_crit_kPa": 3635.0,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HFO",
+  "regulatory_status": "EPA SNAP acceptable; F-Gas phasedown compliant (GWP < 150); replacing R-134a in chillers",
+  "typical_applications": [
+   "centrifugal chillers",
+   "low-pressure refrigeration",
+   "foam blowing agent"
+  ],
+  "replaces": [
+   "R-134a",
+   "R-245fa"
+  ],
+  "replaced_by": []
+ },
+ "R454B": {
+  "ashrae_designation": "R-454B",
+  "chemical_name": "R-32/R-1234yf blend (Opteon™ XL41)",
+  "formula": "R-32/R-1234yf (68.9/31.1 wt%)",
+  "molecular_weight": 62.6,
+  "safety_class": "A2L",
+  "GWP_AR4": 467,
+  "GWP_AR5": 467,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -51.5,
+  "T_crit_C": 75.6,
+  "P_crit_kPa": 4637.0,
+  "T_glide_C": 1.0,
+  "blend_components": [
+   "R-32",
+   "R-1234yf"
+  ],
+  "refrigerant_type": "HFO blend",
+  "regulatory_status": "EPA SNAP acceptable (2019); F-Gas phasedown compliant; leading R-410A replacement",
+  "typical_applications": [
+   "residential AC",
+   "heat pumps",
+   "light commercial AC"
+  ],
+  "replaces": [
+   "R-410A"
+  ],
+  "replaced_by": []
+ },
+ "R452B": {
+  "ashrae_designation": "R-452B",
+  "chemical_name": "R-32/R-125/R-1234yf blend (Solstice® L41y)",
+  "formula": "R-32/R-125/R-1234yf (67/7/26 wt%)",
+  "molecular_weight": 63.5,
+  "safety_class": "A2L",
+  "GWP_AR4": 676,
+  "GWP_AR5": 676,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -51.3,
+  "T_crit_C": 71.8,
+  "P_crit_kPa": 4671.0,
+  "T_glide_C": 1.0,
+  "blend_components": [
+   "R-32",
+   "R-125",
+   "R-1234yf"
+  ],
+  "refrigerant_type": "HFO blend",
+  "regulatory_status": "EPA SNAP acceptable; F-Gas phasedown compliant; R-410A replacement in new equipment",
+  "typical_applications": [
+   "residential AC",
+   "heat pumps",
+   "commercial refrigeration"
+  ],
+  "replaces": [
+   "R-410A"
+  ],
+  "replaced_by": []
+ },
+ "R134a": {
+  "ashrae_designation": "R-134a",
+  "chemical_name": "1,1,1,2-Tetrafluoroethane",
+  "formula": "CH2FCF3",
+  "molecular_weight": 102.03,
+  "safety_class": "A1",
+  "GWP_AR4": 1430,
+  "GWP_AR5": 1300,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -26.4,
+  "T_crit_C": 101.1,
+  "P_crit_kPa": 4059.3,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HFC",
+  "regulatory_status": "F-Gas phasedown (EU); EPA SNAP acceptable with restrictions",
+  "typical_applications": [
+   "automotive AC",
+   "medium-temp refrigeration",
+   "chillers"
+  ],
+  "replaces": [
+   "R-12"
+  ],
+  "replaced_by": [
+   "R-1234yf",
+   "R-1234ze(E)",
+   "R-152a"
+  ]
+ },
+ "R410A": {
+  "ashrae_designation": "R-410A",
+  "chemical_name": "Difluoromethane / Pentafluoroethane blend",
+  "formula": "R-32/R-125 (50/50 wt%)",
+  "molecular_weight": 72.58,
+  "safety_class": "A1",
+  "GWP_AR4": 2088,
+  "GWP_AR5": 1924,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -51.6,
+  "T_crit_C": 71.3,
+  "P_crit_kPa": 4901.2,
+  "T_glide_C": 0.1,
+  "blend_components": [
+   "R-32",
+   "R-125"
+  ],
+  "refrigerant_type": "HFC blend",
+  "regulatory_status": "F-Gas phasedown (EU); phase-down underway in developed markets",
+  "typical_applications": [
+   "residential AC",
+   "light commercial AC",
+   "heat pumps"
+  ],
+  "replaces": [
+   "R-22"
+  ],
+  "replaced_by": [
+   "R-32",
+   "R-454B",
+   "R-452B"
+  ]
+ },
+ "R407C": {
+  "ashrae_designation": "R-407C",
+  "chemical_name": "HFC blend",
+  "formula": "R-32/R-125/R-134a (23/25/52 wt%)",
+  "molecular_weight": 86.2,
+  "safety_class": "A1",
+  "GWP_AR4": 1774,
+  "GWP_AR5": 1624,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -43.6,
+  "T_crit_C": 86.2,
+  "P_crit_kPa": 4631.7,
+  "T_glide_C": 7.0,
+  "blend_components": [
+   "R-32",
+   "R-125",
+   "R-134a"
+  ],
+  "refrigerant_type": "HFC blend",
+  "regulatory_status": "F-Gas phasedown (EU); used as R-22 retrofit in existing systems",
+  "typical_applications": [
+   "commercial AC",
+   "chillers",
+   "R-22 retrofit applications"
+  ],
+  "replaces": [
+   "R-22"
+  ],
+  "replaced_by": [
+   "R-32",
+   "R-454B"
+  ]
+ },
+ "R404A": {
+  "ashrae_designation": "R-404A",
+  "chemical_name": "HFC blend",
+  "formula": "R-125/R-143a/R-134a (44/52/4 wt%)",
+  "molecular_weight": 97.6,
+  "safety_class": "A1",
+  "GWP_AR4": 3922,
+  "GWP_AR5": 3943,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -46.6,
+  "T_crit_C": 72.1,
+  "P_crit_kPa": 3734.8,
+  "T_glide_C": 0.5,
+  "blend_components": [
+   "R-125",
+   "R-143a",
+   "R-134a"
+  ],
+  "refrigerant_type": "HFC blend",
+  "regulatory_status": "F-Gas phasedown (EU); high GWP, being replaced in new equipment",
+  "typical_applications": [
+   "commercial refrigeration",
+   "transport refrigeration",
+   "low-temp refrigeration"
+  ],
+  "replaces": [
+   "R-502",
+   "R-22"
+  ],
+  "replaced_by": [
+   "R-448A",
+   "R-449A",
+   "R-452A"
+  ]
+ },
+ "R22": {
+  "ashrae_designation": "R-22",
+  "chemical_name": "Chlorodifluoromethane",
+  "formula": "CHClF2",
+  "molecular_weight": 86.47,
+  "safety_class": "A1",
+  "GWP_AR4": 1810,
+  "GWP_AR5": 1760,
+  "ODP": 0.055,
+  "normal_boiling_point_C": -40.8,
+  "T_crit_C": 96.2,
+  "P_crit_kPa": 4990.0,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HCFC",
+  "regulatory_status": "Phased out in developed countries (Montreal Protocol); servicing ban in EU since 2015; US production/import ban since 2020",
+  "typical_applications": [
+   "legacy AC",
+   "legacy refrigeration",
+   "legacy heat pumps"
+  ],
+  "replaces": [
+   "R-12"
+  ],
+  "replaced_by": [
+   "R-410A",
+   "R-407C",
+   "R-32"
+  ]
+ },
+ "R290": {
+  "ashrae_designation": "R-290",
+  "chemical_name": "Propane",
+  "formula": "C3H8",
+  "molecular_weight": 44.1,
+  "safety_class": "A3",
+  "GWP_AR4": 3,
+  "GWP_AR5": 3,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -42.1,
+  "T_crit_C": 96.7,
+  "P_crit_kPa": 4251.2,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "natural",
+  "regulatory_status": "Exempt from F-Gas regulations; EPA SNAP acceptable with charge limits; increasingly mandated in EU",
+  "typical_applications": [
+   "small commercial refrigeration",
+   "heat pumps (low charge)",
+   "domestic appliances",
+   "vending machines"
+  ],
+  "replaces": [
+   "R-22",
+   "R-404A"
+  ],
+  "replaced_by": []
+ },
+ "R600a": {
+  "ashrae_designation": "R-600a",
+  "chemical_name": "Isobutane",
+  "formula": "(CH3)3CH",
+  "molecular_weight": 58.12,
+  "safety_class": "A3",
+  "GWP_AR4": 3,
+  "GWP_AR5": 3,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -11.7,
+  "T_crit_C": 134.7,
+  "P_crit_kPa": 3629.0,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "natural",
+  "regulatory_status": "Exempt from F-Gas regulations; EPA SNAP acceptable with charge limits; dominant in EU domestic appliances",
+  "typical_applications": [
+   "domestic refrigerators",
+   "chest freezers",
+   "small commercial display cabinets"
+  ],
+  "replaces": [
+   "R-134a",
+   "R-12"
+  ],
+  "replaced_by": []
+ },
+ "R744": {
+  "ashrae_designation": "R-744",
+  "chemical_name": "Carbon Dioxide",
+  "formula": "CO2",
+  "molecular_weight": 44.01,
+  "safety_class": "A1",
+  "GWP_AR4": 1,
+  "GWP_AR5": 1,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -78.4,
+  "T_crit_C": 31.0,
+  "P_crit_kPa": 7377.3,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "natural",
+  "regulatory_status": "Exempt from F-Gas regulations; GWP=1 reference substance",
+  "typical_applications": [
+   "supermarket refrigeration",
+   "heat pump water heaters",
+   "automotive AC (transcritical)",
+   "industrial refrigeration"
+  ],
+  "replaces": [],
+  "replaced_by": []
+ },
+ "R717": {
+  "ashrae_designation": "R-717",
+  "chemical_name": "Ammonia",
+  "formula": "NH3",
+  "molecular_weight": 17.03,
+  "safety_class": "B2L",
+  "GWP_AR4": 0,
+  "GWP_AR5": 0,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -33.3,
+  "T_crit_C": 132.4,
+  "P_crit_kPa": 11363.4,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "natural",
+  "regulatory_status": "Exempt from F-Gas regulations; requires special handling due to toxicity/flammability",
+  "typical_applications": [
+   "industrial refrigeration",
+   "cold storage warehouses",
+   "ice rinks",
+   "food processing"
+  ],
+  "replaces": [],
+  "replaced_by": []
+ },
+ "R170": {
+  "ashrae_designation": "R-170",
+  "chemical_name": "Ethane",
+  "formula": "C2H6",
+  "molecular_weight": 30.07,
+  "safety_class": "A3",
+  "GWP_AR4": 6,
+  "GWP_AR5": 6,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -88.6,
+  "T_crit_C": 32.2,
+  "P_crit_kPa": 4872.2,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "Natural (hydrocarbon)",
+  "regulatory_status": "Unrestricted (flammability codes apply)",
+  "typical_applications": [
+   "ultra-low-temp cascade (low stage)",
+   "LNG processing"
+  ],
+  "replaces": [
+   "R-23",
+   "R-508B"
+  ],
+  "replaced_by": []
+ },
+ "R1270": {
+  "ashrae_designation": "R-1270",
+  "chemical_name": "Propylene (propene)",
+  "formula": "C3H6",
+  "molecular_weight": 42.08,
+  "safety_class": "A3",
+  "GWP_AR4": 2,
+  "GWP_AR5": 2,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -47.6,
+  "T_crit_C": 91.1,
+  "P_crit_kPa": 4555.0,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "Natural (hydrocarbon)",
+  "regulatory_status": "Unrestricted (flammability codes apply)",
+  "typical_applications": [
+   "industrial refrigeration",
+   "chillers",
+   "heat pumps"
+  ],
+  "replaces": [
+   "R-22",
+   "R-404A"
+  ],
+  "replaced_by": []
+ },
+ "R600": {
+  "ashrae_designation": "R-600",
+  "chemical_name": "n-Butane",
+  "formula": "C4H10",
+  "molecular_weight": 58.12,
+  "safety_class": "A3",
+  "GWP_AR4": 4,
+  "GWP_AR5": 4,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -0.5,
+  "T_crit_C": 152.0,
+  "P_crit_kPa": 3796.0,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "Natural (hydrocarbon)",
+  "regulatory_status": "Unrestricted (flammability codes apply)",
+  "typical_applications": [
+   "high-temp heat pumps",
+   "ORC working fluid",
+   "HC blend component"
+  ],
+  "replaces": [],
+  "replaced_by": []
+ },
+ "R718": {
+  "ashrae_designation": "R-718",
+  "chemical_name": "Water",
+  "formula": "H2O",
+  "molecular_weight": 18.02,
+  "safety_class": "A1",
+  "GWP_AR4": 0,
+  "GWP_AR5": 0,
+  "ODP": 0.0,
+  "normal_boiling_point_C": 100.0,
+  "T_crit_C": 373.95,
+  "P_crit_kPa": 22064.0,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "Natural",
+  "regulatory_status": "Unrestricted",
+  "typical_applications": [
+   "very-high-temp industrial heat pumps",
+   "absorption chillers",
+   "turbo-compression chillers"
+  ],
+  "replaces": [],
+  "replaced_by": []
+ },
+ "RE170": {
+  "ashrae_designation": "R-E170",
+  "chemical_name": "Dimethyl ether",
+  "formula": "CH3OCH3",
+  "molecular_weight": 46.07,
+  "safety_class": "A3",
+  "GWP_AR4": 1,
+  "GWP_AR5": 1,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -24.8,
+  "T_crit_C": 127.2,
+  "P_crit_kPa": 5336.7,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "Natural (ether)",
+  "regulatory_status": "Unrestricted (flammability codes apply)",
+  "typical_applications": [
+   "aerosol propellant",
+   "blend component",
+   "light commercial refrigeration"
+  ],
+  "replaces": [],
+  "replaced_by": []
+ },
+ "R1233zd": {
+  "ashrae_designation": "R-1233zd(E)",
+  "chemical_name": "trans-1-Chloro-3,3,3-trifluoropropene",
+  "formula": "C3H2ClF3",
+  "molecular_weight": 130.5,
+  "safety_class": "A1",
+  "GWP_AR4": 5,
+  "GWP_AR5": 1,
+  "ODP": 0.0003,
+  "normal_boiling_point_C": 18.3,
+  "T_crit_C": 166.5,
+  "P_crit_kPa": 3623.7,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HCFO",
+  "regulatory_status": "Accepted low-GWP alternative (negligible ODP)",
+  "typical_applications": [
+   "low-pressure centrifugal chillers",
+   "ORC",
+   "foam blowing"
+  ],
+  "replaces": [
+   "R-123",
+   "R-245fa"
+  ],
+  "replaced_by": []
+ },
+ "R513A": {
+  "ashrae_designation": "R-513A",
+  "chemical_name": "Azeotropic blend",
+  "formula": null,
+  "molecular_weight": 108.4,
+  "safety_class": "A1",
+  "GWP_AR4": 631,
+  "GWP_AR5": 573,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -29.3,
+  "T_crit_C": 95.2,
+  "P_crit_kPa": 3650.4,
+  "T_glide_C": 0.0,
+  "blend_components": [
+   "R-1234yf (56%)",
+   "R-134a (44%)"
+  ],
+  "refrigerant_type": "HFO/HFC blend",
+  "regulatory_status": "F-Gas compliant mid-term R-134a replacement",
+  "typical_applications": [
+   "chillers",
+   "medium-temp commercial refrigeration"
+  ],
+  "replaces": [
+   "R-134a"
+  ],
+  "replaced_by": []
+ },
+ "R152a": {
+  "ashrae_designation": "R-152a",
+  "chemical_name": "1,1-Difluoroethane",
+  "formula": "CHF2CH3",
+  "molecular_weight": 66.05,
+  "safety_class": "A2",
+  "GWP_AR4": 124,
+  "GWP_AR5": 138,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -24.0,
+  "T_crit_C": 113.3,
+  "P_crit_kPa": 4516.7,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HFC",
+  "regulatory_status": "Low-GWP HFC; acceptable in several SNAP end uses",
+  "typical_applications": [
+   "aerosol propellant",
+   "mobile AC (developmental)",
+   "foam blowing"
+  ],
+  "replaces": [
+   "R-134a"
+  ],
+  "replaced_by": []
+ },
+ "R507A": {
+  "ashrae_designation": "R-507A",
+  "chemical_name": "Azeotropic blend",
+  "formula": null,
+  "molecular_weight": 98.86,
+  "safety_class": "A1",
+  "GWP_AR4": 3985,
+  "GWP_AR5": 3985,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -46.7,
+  "T_crit_C": 70.6,
+  "P_crit_kPa": 3704.9,
+  "T_glide_C": 0.0,
+  "blend_components": [
+   "R-125 (50%)",
+   "R-143a (50%)"
+  ],
+  "refrigerant_type": "HFC blend",
+  "regulatory_status": "F-Gas phasedown — very high GWP, being retired",
+  "typical_applications": [
+   "low-temp commercial refrigeration",
+   "industrial freezers"
+  ],
+  "replaces": [
+   "R-502"
+  ],
+  "replaced_by": [
+   "R-448A",
+   "R-449A"
+  ]
+ },
+ "R23": {
+  "ashrae_designation": "R-23",
+  "chemical_name": "Trifluoromethane",
+  "formula": "CHF3",
+  "molecular_weight": 70.01,
+  "safety_class": "A1",
+  "GWP_AR4": 14800,
+  "GWP_AR5": 12400,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -82.0,
+  "T_crit_C": 26.1,
+  "P_crit_kPa": 4831.7,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HFC",
+  "regulatory_status": "F-Gas restricted — extremely high GWP",
+  "typical_applications": [
+   "ultra-low-temp cascade (low stage)",
+   "environmental test chambers"
+  ],
+  "replaces": [
+   "R-13",
+   "R-503"
+  ],
+  "replaced_by": [
+   "R-170",
+   "R-469A"
+  ]
+ },
+ "R123": {
+  "ashrae_designation": "R-123",
+  "chemical_name": "2,2-Dichloro-1,1,1-trifluoroethane",
+  "formula": "CHCl2CF3",
+  "molecular_weight": 152.93,
+  "safety_class": "B1",
+  "GWP_AR4": 77,
+  "GWP_AR5": 79,
+  "ODP": 0.02,
+  "normal_boiling_point_C": 27.8,
+  "T_crit_C": 183.7,
+  "P_crit_kPa": 3661.8,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "HCFC",
+  "regulatory_status": "Montreal Protocol phase-out (HCFC)",
+  "typical_applications": [
+   "low-pressure centrifugal chillers"
+  ],
+  "replaces": [
+   "R-11"
+  ],
+  "replaced_by": [
+   "R-1233zd(E)",
+   "R-514A"
+  ]
+ },
+ "R12": {
+  "ashrae_designation": "R-12",
+  "chemical_name": "Dichlorodifluoromethane",
+  "formula": "CCl2F2",
+  "molecular_weight": 120.91,
+  "safety_class": "A1",
+  "GWP_AR4": 10900,
+  "GWP_AR5": 10200,
+  "ODP": 1.0,
+  "normal_boiling_point_C": -29.8,
+  "T_crit_C": 112.0,
+  "P_crit_kPa": 4136.2,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "CFC",
+  "regulatory_status": "Banned — Montreal Protocol (production ended 1996)",
+  "typical_applications": [
+   "domestic refrigeration (historical)",
+   "automotive AC (historical)"
+  ],
+  "replaces": [],
+  "replaced_by": [
+   "R-134a"
+  ]
+ },
+ "R11": {
+  "ashrae_designation": "R-11",
+  "chemical_name": "Trichlorofluoromethane",
+  "formula": "CCl3F",
+  "molecular_weight": 137.37,
+  "safety_class": "A1",
+  "GWP_AR4": 4750,
+  "GWP_AR5": 4660,
+  "ODP": 1.0,
+  "normal_boiling_point_C": 23.7,
+  "T_crit_C": 198.0,
+  "P_crit_kPa": 4407.6,
+  "T_glide_C": 0.0,
+  "blend_components": null,
+  "refrigerant_type": "CFC",
+  "regulatory_status": "Banned — Montreal Protocol (production ended 1996)",
+  "typical_applications": [
+   "low-pressure centrifugal chillers (historical)"
+  ],
+  "replaces": [],
+  "replaced_by": [
+   "R-123",
+   "R-1233zd(E)"
+  ]
+ }
 }

@@ -17,8 +17,10 @@ and bump the version everywhere when the schema changes.
   }
 }
 ```
-14 fluids: R32, R1234yf, R1234ze, R454B, R452B, R134a, R410A, R407C, R404A,
-R22, R290, R600a, R744, R717.
+27 fluids: R32, R1234yf, R1234ze, R454B, R452B, R134a, R410A, R407C, R404A,
+R22, R290, R600a, R744, R717, R170, R1270, R600, R718, RE170, R1233zd,
+R513A, R152a, R507A, R23, R123, R12, R11.
+Keys match `data/refrigerants.json` exactly.
 
 ## sat.json — saturation table (indexed by T)
 
@@ -43,10 +45,14 @@ R22, R290, R600a, R744, R717.
   (+ for superheat above the dew line, − for subcool below the bubble line).
 - `Tsat_C[j]` is the dew temperature (superheat) or bubble temperature
   (subcool) at `P_values_kPa[j]` — this is what makes glide handling correct.
-- Grids are dense; the only `null`s are a physically unreachable corner for
-  blends (deep subcool at vacuum pressures, where the mixture EOS has no data).
-- P columns: standard set within [P_triple, 0.99·P_crit] plus near-critical
-  anchors at {0.80, 0.90, 0.95, 0.99}·P_crit.
+- Grids are dense in cycle territory; `null`s exist only in physically
+  unreachable corners (deep subcool at vacuum pressures for blends; superheat
+  ΔT rows beyond an EOS temperature limit). Lookups skip/throw on them.
+- P columns: standard set within [max(P_triple, ~0.9·Psat(T_min)),
+  0.99·P_crit], including sub-50 kPa values for low-pressure fluids
+  (R11, R123, R718, R1233zd, …), plus near-critical anchors at
+  {0.80, 0.90, 0.95, 0.99}·P_crit. Superheat ΔT rows reach 300 K for
+  steep-isentrope fluids (R718).
 - `tables.js` interpolates **log-P** along the pressure axis, linear in ΔT.
 - ΔT=0 rows are computed on the saturation curve itself (PQ flash), so the
   anchor row is exact.

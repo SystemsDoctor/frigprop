@@ -14,9 +14,54 @@
 > label-based tooltip filter), coolprop.js deleted (A9), README rewritten,
 > CI workflow (harness on push/PR) + Pages deploy workflow added (one-time
 > manual step: Settings → Pages → Source: GitHub Actions).
-> **All planned phases are done.** Remaining stretch goals only:
-> transcritical R744 gas-cooler model (C5b), constant-h expansion curve on
-> the T-s diagram (A6, low priority).
+> **All planned phases are done.** Post-launch round 1: layout rework
+> (gallery full-width on top, left column un-clipped), 13 added fluids
+> (27 total, incl. CFC/HCFO/naturals; low-pressure grid support), harness
+> at 221 cases. Phase 5 below (units toggle) is PLANNED, NOT implemented.
+> Remaining stretch goals: transcritical R744 gas-cooler model (C5b),
+> constant-h expansion curve on the T-s diagram (A6, low priority).
+
+---
+
+## F. Phase 5 — SI ⇄ US-customary units toggle (planned, not yet implemented)
+
+Master toggle (nav bar, next to the status pill) switching every input and
+output between SI and IP units. **The backend and all thermodynamics stay
+SI** — tables, `tables.js`, `cycle.js`, and the test harness are untouched.
+Conversion happens only at the display/input boundary. Not a large overhaul:
+one new module plus edits to the display layer (~250 lines).
+
+Unit map (kind → SI / IP):
+- T: °C / °F (T·9/5+32) · ΔT: K / °R (·1.8) · P: kPa / psia (/6.894757)
+- h, u: kJ/kg / Btu/lb (/2.326) · s, cp: kJ/kg·K / Btu/lb·°R (/4.1868)
+- ρ: kg/m³ / lb/ft³ (/16.0185) · v: m³/kg / ft³/lb (·16.0185)
+
+Steps:
+1. **`assets/js/units.js` (new)** — single source of truth:
+   `getSystem()/setSystem()` (persisted to localStorage),
+   `toDisplay(value, kind)`, `fromInput(value, kind)`, `label(kind)`,
+   conversion table as data. No DOM.
+2. **`index.html`** — nav toggle button (`SI | IP`); give the static unit
+   spans (input-unit, th-unit) `data-kind` attributes so one
+   `refreshUnitLabels()` pass can rewrite them.
+3. **`ui.js`** — `getInputs()`/`getLookupInputs()` pipe through
+   `fromInput`; `renderResults`/`renderLookupState`/`renderLookupSat`/
+   `renderInfoPanel`/`setRangeHint` pipe through `toDisplay`/`label`.
+   Placeholders (e.g. "e.g. −10") switched per system.
+4. **`app.js`** — wire the toggle: on switch, refresh labels, re-render the
+   last results from retained SI state objects (keep `lastStates/lastMetrics`
+   in module scope), re-run lookup display if present.
+5. **`chart.js`** — datasets built in display space (convert T and s at
+   dataset build); axis titles from `label()`; tooltip formatter converted.
+   `updateTsChart` re-invoked on toggle by app.js.
+6. **Validation** — add a small `tests/units.mjs` (pure conversion checks
+   against known pairs, e.g. 0 °C = 32 °F, 100 kPa = 14.5038 psia,
+   1 kJ/kg = 0.42992 Btu/lb); CI runs it alongside e2e. Manual check that
+   a full cycle in IP matches the SI numbers through hand conversion.
+
+Acceptance: toggling converts all visible numbers/labels (cycle inputs,
+state table, performance, lookup pane, info panel, range hints, T-s axes)
+with no backend value drift; choice persists across reloads.
 
 Goal: a GitHub-Pages-hosted interactive page where a user (1) selects a modern
 refrigerant from a card gallery, (2) sees regulatory / applications /

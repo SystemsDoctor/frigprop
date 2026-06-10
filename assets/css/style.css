@@ -122,16 +122,27 @@ nav {
 
 .app-body {
   display: flex;
+  flex-direction: column;
   gap: var(--gap);
   padding: var(--gap);
-  align-items: flex-start;
   position: relative;
   z-index: 1;
   max-width: 1100px;
   margin: 0 auto;
 }
 
-/* Left column — sticky, two stacked panes */
+/* Full-width gallery pane on top, columns below */
+.pane-gallery {
+  width: 100%;
+}
+
+.app-columns {
+  display: flex;
+  gap: var(--gap);
+  align-items: flex-start;
+}
+
+/* Left column — stacked panes, full content always visible */
 .col-left {
   width: var(--left-w);
   min-width: 240px;
@@ -139,14 +150,7 @@ nav {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
-  position: sticky;
-  top: calc(var(--nav-h) + var(--gap));
-  max-height: calc(100vh - var(--nav-h) - var(--gap) * 2);
-  overflow-y: auto;
-  /* Hide scrollbar but keep scroll */
-  scrollbar-width: none;
 }
-.col-left::-webkit-scrollbar { display: none; }
 
 /* Right column — flex container for cycle pane + chart pane */
 .col-right {
@@ -229,7 +233,7 @@ nav {
 
 .refrig-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
 
 .ref-card {
@@ -292,7 +296,9 @@ nav {
 
 .ref-badge-type-hfc     { background: rgba(0,212,255,.12);  color: var(--accent); }
 .ref-badge-type-hfo     { background: rgba(57,229,140,.12); color: var(--accent3); }
+.ref-badge-type-hcfo    { background: rgba(57,229,140,.10); color: #8fdc6a; }
 .ref-badge-type-hcfc    { background: rgba(255,165,2,.10);  color: var(--warn); }
+.ref-badge-type-cfc     { background: rgba(255,71,87,.10);  color: var(--danger); }
 .ref-badge-type-natural { background: rgba(57,229,140,.15); color: #2dd4a3; border: 1px solid rgba(57,229,140,.2); }
 .ref-badge-type-blend   { background: rgba(168,130,230,.12); color: #a882e6; }
 .ref-badge-safety       { background: rgba(255,255,255,.04); color: var(--text-dim); border: 1px solid var(--border2); }
@@ -812,16 +818,13 @@ nav {
 
 /* Tablet: stack columns vertically, left panes go side-by-side */
 @media (max-width: 920px) {
-  .app-body {
+  .app-columns {
     flex-direction: column;
   }
 
   .col-left {
-    position: static;
     width: 100%;
     min-width: 0;
-    max-height: none;
-    overflow-y: visible;
     flex-direction: row;
     flex-wrap: wrap;
     gap: var(--gap);

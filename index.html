@@ -23,16 +23,18 @@
   <!-- Tiled layout -->
   <div class="app-body">
 
-    <!-- LEFT COLUMN: two stacked panes, sticky -->
-    <div class="col-left">
-
-      <!-- Pane: refrigerant selector -->
-      <div class="pane">
-        <div class="panel-header">
-          <span class="panel-title">Select Refrigerant</span>
-        </div>
-        <div id="ref-cards" class="refrig-grid"></div>
+    <!-- TOP: full-width refrigerant gallery -->
+    <div class="pane pane-gallery">
+      <div class="panel-header">
+        <span class="panel-title">Select Refrigerant</span>
       </div>
+      <div id="ref-cards" class="refrig-grid"></div>
+    </div>
+
+    <div class="app-columns">
+
+    <!-- LEFT COLUMN: properties + lookup -->
+    <div class="col-left">
 
       <!-- Pane: refrigerant properties -->
       <div class="pane">
@@ -273,6 +275,7 @@
     </div>
 
     </div><!-- .col-right -->
+    </div><!-- .app-columns -->
   </div><!-- .app-body -->
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
