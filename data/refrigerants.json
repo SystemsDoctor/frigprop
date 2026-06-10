@@ -23,7 +23,8 @@
   "replaces": [
    "R-410A"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R1234yf": {
   "ashrae_designation": "R-1234yf",
@@ -48,7 +49,8 @@
   "replaces": [
    "R-134a"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R1234ze": {
   "ashrae_designation": "R-1234ze(E)",
@@ -75,7 +77,8 @@
    "R-134a",
    "R-245fa"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R454B": {
   "ashrae_designation": "R-454B",
@@ -104,7 +107,8 @@
   "replaces": [
    "R-410A"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "Mixture model (IIR components) — h_f ≈ 206.5 kJ/kg, s_f ≈ 1.076 kJ/kg·K at 0 °C"
  },
  "R452B": {
   "ashrae_designation": "R-452B",
@@ -134,7 +138,8 @@
   "replaces": [
    "R-410A"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "Mixture model (IIR components) — h_f ≈ 205.7 kJ/kg, s_f ≈ 1.087 kJ/kg·K at 0 °C"
  },
  "R134a": {
   "ashrae_designation": "R-134a",
@@ -164,7 +169,8 @@
    "R-1234yf",
    "R-1234ze(E)",
    "R-152a"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R410A": {
   "ashrae_designation": "R-410A",
@@ -197,7 +203,8 @@
    "R-32",
    "R-454B",
    "R-452B"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R407C": {
   "ashrae_designation": "R-407C",
@@ -230,7 +237,8 @@
   "replaced_by": [
    "R-32",
    "R-454B"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R404A": {
   "ashrae_designation": "R-404A",
@@ -265,7 +273,8 @@
    "R-448A",
    "R-449A",
    "R-452A"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R22": {
   "ashrae_designation": "R-22",
@@ -295,7 +304,8 @@
    "R-410A",
    "R-407C",
    "R-32"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R290": {
   "ashrae_designation": "R-290",
@@ -323,7 +333,8 @@
    "R-22",
    "R-404A"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R600a": {
   "ashrae_designation": "R-600a",
@@ -350,7 +361,8 @@
    "R-134a",
    "R-12"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R744": {
   "ashrae_designation": "R-744",
@@ -375,7 +387,8 @@
    "industrial refrigeration"
   ],
   "replaces": [],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R717": {
   "ashrae_designation": "R-717",
@@ -400,7 +413,8 @@
    "food processing"
   ],
   "replaces": [],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "EOS default — h_f = 345.7 kJ/kg, s_f = 1.484 kJ/kg·K at 0 °C"
  },
  "R170": {
   "ashrae_designation": "R-170",
@@ -426,7 +440,8 @@
    "R-23",
    "R-508B"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "NBP — h = 0, s = 0 (sat. liquid at normal boiling point)"
  },
  "R1270": {
   "ashrae_designation": "R-1270",
@@ -453,7 +468,8 @@
    "R-22",
    "R-404A"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R600": {
   "ashrae_designation": "R-600",
@@ -477,7 +493,8 @@
    "HC blend component"
   ],
   "replaces": [],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R718": {
   "ashrae_designation": "R-718",
@@ -501,7 +518,8 @@
    "turbo-compression chillers"
   ],
   "replaces": [],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IAPWS — u = 0, s = 0 (sat. liquid at triple point)"
  },
  "RE170": {
   "ashrae_designation": "R-E170",
@@ -525,7 +543,8 @@
    "light commercial refrigeration"
   ],
   "replaces": [],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "NBP — h = 0, s = 0 (sat. liquid at normal boiling point)"
  },
  "R1233zd": {
   "ashrae_designation": "R-1233zd(E)",
@@ -552,7 +571,8 @@
    "R-123",
    "R-245fa"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R513A": {
   "ashrae_designation": "R-513A",
@@ -580,7 +600,8 @@
   "replaces": [
    "R-134a"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "Mixture model (IIR components) — h_f ≈ 202.3 kJ/kg, s_f ≈ 1.058 kJ/kg·K at 0 °C"
  },
  "R152a": {
   "ashrae_designation": "R-152a",
@@ -606,7 +627,8 @@
   "replaces": [
    "R-134a"
   ],
-  "replaced_by": []
+  "replaced_by": [],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R507A": {
   "ashrae_designation": "R-507A",
@@ -637,7 +659,8 @@
   "replaced_by": [
    "R-448A",
    "R-449A"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R23": {
   "ashrae_designation": "R-23",
@@ -666,7 +689,8 @@
   "replaced_by": [
    "R-170",
    "R-469A"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R123": {
   "ashrae_designation": "R-123",
@@ -693,7 +717,8 @@
   "replaced_by": [
    "R-1233zd(E)",
    "R-514A"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R12": {
   "ashrae_designation": "R-12",
@@ -718,7 +743,8 @@
   "replaces": [],
   "replaced_by": [
    "R-134a"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  },
  "R11": {
   "ashrae_designation": "R-11",
@@ -743,6 +769,7 @@
   "replaced_by": [
    "R-123",
    "R-1233zd(E)"
-  ]
+  ],
+  "reference_state": "IIR — h = 200 kJ/kg, s = 1.000 kJ/kg·K (sat. liquid, 0 °C)"
  }
 }

@@ -481,6 +481,13 @@ nav {
   flex-shrink: 0;
 }
 
+/* Narrow left-column panes: tighter rows so inputs never clip on the right */
+.col-left .form-row { justify-content: space-between; gap: 8px; }
+.col-left .form-row > label { min-width: 0; }
+.col-left .input-group { flex-shrink: 0; }
+.col-left .input-group input[type="number"] { width: 84px; }
+.col-left .lookup-select { max-width: 160px; }
+
 /* Input groups */
 .input-group {
   display: inline-flex;

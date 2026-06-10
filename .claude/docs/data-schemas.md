@@ -62,8 +62,12 @@ Keys match `data/refrigerants.json` exactly.
 Per fluid: `ashrae_designation, chemical_name, formula, molecular_weight,
 safety_class, GWP_AR4, GWP_AR5, ODP, normal_boiling_point_C, T_crit_C,
 P_crit_kPa, T_glide_C, blend_components, refrigerant_type, regulatory_status,
-typical_applications[], replaces[], replaced_by[]`.
+typical_applications[], replaces[], replaced_by[], reference_state`.
 Keys here must match `tables/manifest.json` fluid keys exactly.
+`reference_state` documents the h/s zero-point convention the tables follow
+(IIR for most CoolProp fluids; NBP for R170/RE170; IAPWS for R718; explicit
+anchors for ammonia and the custom blends) — h/s values are only comparable
+within one convention.
 
 ## Inspecting tables without reading them
 
