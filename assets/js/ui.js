@@ -81,8 +81,10 @@ function _typeSlug(type) {
   if (!type) return "hfc";
   const t = type.toLowerCase();
   if (t.includes("natural")) return "natural";
+  if (t.includes("hcfo"))    return "hcfo";
   if (t.includes("hfo"))     return "hfo";
   if (t.includes("hcfc"))    return "hcfc";
+  if (t.includes("cfc"))     return "cfc";
   if (t.includes("blend"))   return "blend";
   return "hfc";
 }
@@ -91,8 +93,10 @@ function _typeLabel(type) {
   if (!type) return "HFC";
   const t = type.toLowerCase();
   if (t.includes("natural")) return "Natural";
+  if (t.includes("hcfo"))    return "HCFO";
   if (t.includes("hfo"))     return "HFO";
   if (t.includes("hcfc"))    return "HCFC";
+  if (t.includes("cfc"))     return "CFC";
   if (t === "hfc blend" || t.includes("blend")) return "Blend";
   return "HFC";
 }

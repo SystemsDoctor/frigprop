@@ -102,9 +102,9 @@ def state(cp_name, **inputs):
     return out
 
 
-def props_cases(fluid_key, cp_name):
+def props_cases(fluid_key, cp_name, Tref_C=0):
     """Standalone getProps checks around a mid-range pressure."""
-    P = CP.PropsSI("P", "T", K(0), "Q", 1, cp_name)  # Pdew at 0 °C
+    P = CP.PropsSI("P", "T", K(Tref_C), "Q", 1, cp_name)  # Pdew at Tref
     P_kPa = P / 1000.0
     T_dew = CP.PropsSI("T", "P", P, "Q", 1, cp_name)
     T_bub = CP.PropsSI("T", "P", P, "Q", 0, cp_name)
@@ -135,11 +135,13 @@ def main():
     for key, cfg in FLUIDS.items():
         cp_name = cfg["cp_name"]
         T_crit_C, _ = resolve_crit(cfg)
-        Te, Tc = -10, min(40, int(T_crit_C - 8))
+        # clamp to fluid range: water can't evaporate at -10 °C
+        Te = max(-10, cfg["T_min_C"] + 5)
+        Tc = min(40, int(T_crit_C - 8))
         for sh, sc in CYCLE_VARIANTS:
             cycles.append({"fluid": key, "Te": Te, "Tc": Tc, "sh": sh, "sc": sc,
                            "want": cycle_truth(cp_name, Te, Tc, sh, sc)})
-        props.extend(props_cases(key, cp_name))
+        props.extend(props_cases(key, cp_name, Tref_C=max(0, cfg["T_min_C"] + 10)))
     for key, Te, Tc in STRESS_CYCLES:
         cycles.append({"fluid": key, "Te": Te, "Tc": Tc, "sh": 0, "sc": 0,
                        "want": cycle_truth(FLUIDS[key]["cp_name"], Te, Tc, 0, 0)})

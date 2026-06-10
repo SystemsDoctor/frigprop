@@ -22,10 +22,15 @@ no build step.
 - **T-s diagram** — saturation dome, cycle overlay, lookup-state marker;
   pannable with recenter.
 
-## Refrigerants
+## Refrigerants (27)
 
-R-32, R-1234yf, R-1234ze(E), R-454B, R-452B, R-134a, R-410A, R-407C, R-404A,
-R-22, R-290 (propane), R-600a (isobutane), R-744 (CO₂), R-717 (ammonia)
+- **Modern / low-GWP:** R-32, R-1234yf, R-1234ze(E), R-1233zd(E), R-454B,
+  R-452B, R-513A, R-152a
+- **Legacy HFC / HCFC / CFC:** R-134a, R-410A, R-407C, R-404A, R-507A, R-23,
+  R-22, R-123, R-12, R-11
+- **Natural & other-purpose fluids:** R-744 (CO₂), R-717 (ammonia),
+  R-290 (propane), R-1270 (propylene), R-600a (isobutane), R-600 (n-butane),
+  R-170 (ethane), R-718 (water), R-E170 (dimethyl ether)
 
 ## How it works
 
@@ -34,7 +39,7 @@ CoolProp tables (`tables/`). Single-phase grids are indexed by distance from
 saturation (ΔT, P) with log-P interpolation, which keeps accuracy high where
 cycles actually live. The end-to-end pipeline is held to ±1 % COP,
 ±0.5 kJ/kg enthalpy, ±0.002 kJ/kg·K entropy, and ±0.3 K temperature against
-CoolProp across a 117-case matrix (`tests/`).
+CoolProp across a 221-case matrix (`tests/`).
 
 ### Accuracy notes
 

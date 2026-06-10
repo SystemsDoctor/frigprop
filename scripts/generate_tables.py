@@ -45,16 +45,46 @@ FLUIDS = {
     "R600a":   {"cp_name": "IsoButane",    "T_min_C": -40, "T_max_C": 120, "P_max_kPa": 3500},
     "R744":    {"cp_name": "CO2",          "T_min_C": -50, "T_max_C":  30, "P_max_kPa": 12000},
     "R717":    {"cp_name": "Ammonia",      "T_min_C": -60, "T_max_C": 100, "P_max_kPa": 3000},
+
+    # Additional naturals / hydrocarbons / other-purpose fluids
+    "R170":    {"cp_name": "Ethane",        "T_min_C": -80, "T_max_C":  30, "P_max_kPa": 5000},
+    "R1270":   {"cp_name": "Propylene",     "T_min_C": -60, "T_max_C":  85, "P_max_kPa": 4500},
+    "R600":    {"cp_name": "n-Butane",      "T_min_C": -40, "T_max_C": 140, "P_max_kPa": 3500},
+    "R718":    {"cp_name": "Water",         "T_min_C":   5, "T_max_C": 200, "P_max_kPa": 1600},
+    "RE170":   {"cp_name": "DimethylEther", "T_min_C": -60, "T_max_C": 120, "P_max_kPa": 5000},
+
+    # New low-GWP fluids
+    "R1233zd": {"cp_name": "R1233zd(E)",   "T_min_C": -30, "T_max_C": 150, "P_max_kPa": 3000},
+    # R513A is a custom-composition azeotropic blend (mole fractions);
+    # critical point from CoolProp all_critical_points().
+    "R513A":   {
+        "cp_name":    "R1234yf[0.5325]&R134a[0.4675]",
+        "T_min_C": -50, "T_max_C": 85, "P_max_kPa": 3500,
+        "T_crit_C": 95.18, "P_crit_kPa": 3650.4,
+    },
+
+    # Additional legacy HFCs / HCFCs / CFCs (historical reference)
+    "R152a":   {"cp_name": "R152A",        "T_min_C": -60, "T_max_C": 100, "P_max_kPa": 4500},
+    "R507A":   {"cp_name": "R507A",        "T_min_C": -60, "T_max_C":  60, "P_max_kPa": 4000},
+    "R23":     {"cp_name": "R23",          "T_min_C": -80, "T_max_C":  25, "P_max_kPa": 5000},
+    "R123":    {"cp_name": "R123",         "T_min_C": -30, "T_max_C": 150, "P_max_kPa": 3000},
+    "R12":     {"cp_name": "R12",          "T_min_C": -60, "T_max_C": 100, "P_max_kPa": 3500},
+    "R11":     {"cp_name": "R11",          "T_min_C": -40, "T_max_C": 120, "P_max_kPa": 2500},
 }
 
 SCHEMA_VERSION = 2
 
 # Single-phase grids are indexed by distance from saturation (ΔT) so every
 # cell is valid — see PLAN.md Phase 1.
-SH_DT_VALUES_K = [0, 2, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 120, 140]
+# extends to 300 K for steep-isentrope fluids (R718 steam, R717); cells beyond
+# an EOS temperature limit are null (unreachable, skipped by lookups)
+SH_DT_VALUES_K = [0, 2, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 120, 140,
+                  160, 180, 200, 250, 300]
 SC_DT_VALUES_K = [0, 1, 2, 5, 10, 15, 20, 30, 40]
 SH_P_VALUES_KPA = [50, 75, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000,
                    2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 8000, 10000, 12000]
+# Sub-50 kPa columns for low-pressure fluids (R11, R123, R718, R1233zd, …)
+LOW_P_VALUES_KPA = [1, 1.5, 2, 3, 5, 7.5, 10, 15, 20, 30, 40]
 P_CRIT_ANCHOR_FRACS = [0.80, 0.90, 0.95, 0.99]
 
 SAT_T_STEP = 0.5
@@ -62,12 +92,19 @@ R744_CRIT_T_C = 30.978
 R744_CRIT_FINE_RANGE = 5.0
 
 
-def build_P_values(P_max_kPa, P_crit_kPa, P_triple_kPa=None):
-    """Standard pressures up to the limit, plus near-critical anchor points.
-    Pressures below the triple point have no liquid-vapor saturation (CO2)."""
+def build_P_values(P_max_kPa, P_crit_kPa, P_triple_kPa=None, Psat_Tmin_kPa=None):
+    """Standard pressures within [floor, limit], plus near-critical anchors.
+    The floor covers down to Psat(T_min) (so every saturated state in the
+    sat table has grid coverage) but never below the triple point (CO2)."""
     limit = min(P_max_kPa, P_crit_kPa * 0.99) if P_crit_kPa else P_max_kPa
     P_floor = P_triple_kPa if P_triple_kPa else 0.0
-    vals = [float(p) for p in SH_P_VALUES_KPA if P_floor <= p <= limit]
+    if Psat_Tmin_kPa:
+        P_floor = max(P_floor, min(50.0, Psat_Tmin_kPa * 0.9))
+    vals = [float(p) for p in LOW_P_VALUES_KPA + SH_P_VALUES_KPA if P_floor <= p <= limit]
+    # guarantee a column at/below Psat(T_min)
+    if Psat_Tmin_kPa and (not vals or vals[0] > Psat_Tmin_kPa):
+        anchor = max(P_floor, Psat_Tmin_kPa * 0.95)
+        vals.insert(0, round(anchor, 3))
     if P_crit_kPa:
         for f in P_CRIT_ANCHOR_FRACS:
             p = round(P_crit_kPa * f, 1)
@@ -278,7 +315,9 @@ def generate_fluid(fluid_key, run_only=None):
         P_triple_kPa = CP.PropsSI("ptriple", cfg["cp_name"]) / 1000.0
     except Exception:
         P_triple_kPa = None
-    P_vals = build_P_values(cfg["P_max_kPa"], P_crit_kPa, P_triple_kPa)
+    Psat_Tmin = safe_props(cp_name, "P", "T", cfg["T_min_C"] + 273.15, "Q", 1)
+    Psat_Tmin_kPa = Psat_Tmin / 1000.0 if Psat_Tmin is not None else None
+    P_vals = build_P_values(cfg["P_max_kPa"], P_crit_kPa, P_triple_kPa, Psat_Tmin_kPa)
     sh, sh_count = generate_dt_table(fluid_key, cp_name, "superheat", SH_DT_VALUES_K, P_vals)
     write_json(os.path.join(out_dir, "superheat.json"), sh)
 
