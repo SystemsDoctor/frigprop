@@ -490,6 +490,23 @@ nav {
   box-shadow: 0 0 0 3px rgba(0,212,255,.1);
 }
 
+.lookup-select {
+  background: rgba(0,0,0,.4);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  padding: 7px 8px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.lookup-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,212,255,.1);
+}
+
 .input-group input[type="number"] {
   background: rgba(0,0,0,.4);
   border: none;

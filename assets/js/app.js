@@ -10,13 +10,16 @@ import {
   renderInfoPanel, wireInputControls, getInputs, setRangeHint,
   enableCalcButton, onCalcClick, showError, clearError,
   renderResults, showTranscritWarning, highlightRefCard,
+  wireLookupControls, enableLookupButton, showLookupError,
+  renderLookupState, renderLookupSat,
 } from "./ui.js";
-import { initTsChart, updateTsChart, clearCycleOverlay } from "./chart.js";
+import { initTsChart, updateTsChart, clearCycleOverlay, setTsMarker } from "./chart.js";
 
 let currentFluidKey = null;
 
 async function init() {
   wireInputControls();
+  wireLookupControls(handleLookup);
   initTsChart();
 
   try {
@@ -51,6 +54,7 @@ async function selectFluid(key) {
   currentFluidKey = key;
   setStatus("working", "Loading…");
   enableCalcButton(false);
+  enableLookupButton(false);
 
   try {
     await backend.init(key);
@@ -61,12 +65,17 @@ async function selectFluid(key) {
     highlightRefCard(key, info);
     setStatus("ready", `Ready — ${key}`);
     enableCalcButton(true);
+    enableLookupButton(true);
     clearError();
     // Hide old results
     document.getElementById("results-section").classList.add("hidden");
     document.getElementById("warnings-box").classList.add("hidden");
+    document.getElementById("notes-box").classList.add("hidden");
     document.getElementById("transcrit-notice").classList.add("hidden");
     document.getElementById("error-box").classList.add("hidden");
+    document.getElementById("lookup-result").classList.add("hidden");
+    document.getElementById("lookup-error").classList.add("hidden");
+    setTsMarker(null);
     // Update T-s diagram with saturation dome for new fluid
     const satRows = backend.getSatRows(key);
     const fluidLabel = document.getElementById("ts-fluid-label");
@@ -140,6 +149,46 @@ async function handleCalc() {
     showError(`Calculation error: ${err.message}`);
   } finally {
     enableCalcButton(true);
+  }
+}
+
+async function handleLookup(inp) {
+  if (!currentFluidKey) return;
+  const { pair, v1, v2 } = inp;
+
+  if (isNaN(v1)) { showLookupError("Enter the first property value."); return; }
+  const needsV2 = pair !== "satT" && pair !== "satP";
+  if (needsV2 && isNaN(v2)) { showLookupError("Enter the second property value."); return; }
+  if ((pair === "TQ" || pair === "PQ") && (v2 < 0 || v2 > 1)) {
+    showLookupError(`Quality x = ${v2} out of range — must be between 0 and 1.`); return;
+  }
+
+  try {
+    if (pair === "satT" || pair === "satP") {
+      const sat = await backend.getSatProps(pair === "satT" ? "T" : "P", v1);
+      renderLookupSat(sat);
+      setTsMarker(null);
+    } else {
+      const st = await backend.getProps(pair, v1, v2);
+      renderLookupState(st, await _phaseLabel(st));
+      setTsMarker({ x: st.s, y: st.T_C });
+    }
+  } catch (err) {
+    showLookupError(err.message);
+  }
+}
+
+async function _phaseLabel(st) {
+  if (st.x !== null && st.x !== undefined) {
+    if (st.x <= 0.0001) return "saturated liquid";
+    if (st.x >= 0.9999) return "saturated vapor";
+    return `two-phase mixture (x = ${st.x.toFixed(3)})`;
+  }
+  try {
+    const sat = await backend.getSatProps("P", st.P_kPa);
+    return st.T_C >= sat.T_dew_C ? "superheated vapor" : "subcooled liquid";
+  } catch (_) {
+    return "single-phase";
   }
 }
 
