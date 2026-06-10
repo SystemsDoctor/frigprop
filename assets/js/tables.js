@@ -1,7 +1,7 @@
 /**
- * tables.js — Property table backend for FrigProp (Plan B: precomputed tables).
- * Exports a single default object with the same interface as coolprop.js so
- * the two backends can be swapped without touching any other module.
+ * tables.js — Property table backend for FrigProp (precomputed tables).
+ * Exports a single default object; an alternative backend (e.g. CoolProp
+ * WASM) implementing the same interface could be swapped in via app.js.
  *
  * Schema v2: single-phase grids are indexed by (ΔT from saturation, P), so the
  * grid is dense everywhere a cycle lives. Each table carries its own Tsat_C

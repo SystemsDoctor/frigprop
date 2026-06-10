@@ -10,7 +10,13 @@
 > Phase 3 complete: Property Lookup pane (T&P, P&h, P&s, T&x, P&x, plus
 > saturation-row views with glide-aware bubble/dew display), full state output
 > incl. u and v, phase labeling, T-s diagram lookup marker (D5).
-> Next: Phase 4.2–4.4 (Pages deploy, README, chart fixes A6, delete coolprop.js).
+> Phase 4 complete: chart fixes (A6 — condensation shelf at Tsat(P_cond),
+> label-based tooltip filter), coolprop.js deleted (A9), README rewritten,
+> CI workflow (harness on push/PR) + Pages deploy workflow added (one-time
+> manual step: Settings → Pages → Source: GitHub Actions).
+> **All planned phases are done.** Remaining stretch goals only:
+> transcritical R744 gas-cooler model (C5b), constant-h expansion curve on
+> the T-s diagram (A6, low priority).
 
 Goal: a GitHub-Pages-hosted interactive page where a user (1) selects a modern
 refrigerant from a card gallery, (2) sees regulatory / applications /
