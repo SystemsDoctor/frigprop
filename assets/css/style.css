@@ -526,9 +526,10 @@ nav {
 /* Narrow left-column panes: tighter rows so inputs never clip on the right */
 .col-left .form-row { justify-content: space-between; gap: 8px; }
 .col-left .form-row > label { min-width: 0; }
-.col-left .input-group { flex-shrink: 0; }
-.col-left .input-group input[type="number"] { width: 84px; }
-.col-left .lookup-select { max-width: 160px; }
+/* entry boxes line up with (and match the width of) the pair selector */
+.col-left .lookup-select { width: 160px; max-width: 160px; }
+.col-left .input-group { flex-shrink: 0; width: 160px; }
+.col-left .input-group input[type="number"] { width: 0; flex: 1; min-width: 0; }
 
 /* Input groups */
 .input-group {
@@ -902,6 +903,31 @@ nav {
 .chart-tab.active {
   background: rgba(0,212,255,.14);
   color: var(--accent);
+}
+
+/* Dome/cycle color key shown when two fluids are compared */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 9px 16px 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
 }
 
 .chart-wrap {
