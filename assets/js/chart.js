@@ -207,6 +207,7 @@ function _rebuild() {
     if (f.states && f.states.length === 4) datasets.push(..._buildCycleDatasets(f, pal));
   });
   if (_marker) datasets.push(_buildMarkerDataset(_marker));
+  _renderLegend(fluids);
 
   const options = _buildOptions(_bounds);
   if (_chart) {
@@ -224,6 +225,22 @@ function _rebuild() {
       plugins: [_bgPlugin],
     });
   }
+}
+
+/** Dome/cycle color key — shown only when two fluids are compared. */
+function _renderLegend(fluids) {
+  const el = document.getElementById('chart-legend');
+  if (!el) return;
+  const show = fluids.length > 1;
+  el.classList.toggle('hidden', !show);
+  if (!show) { el.innerHTML = ''; return; }
+  const item = (color, text) =>
+    `<span class="legend-item"><span class="legend-swatch" style="background:${color}"></span>${text}</span>`;
+  el.innerHTML = fluids.map((f, i) => {
+    const pal = PALETTES[i];
+    return item(pal.dome, `${f.label} dome`) +
+           (f.states ? item(pal.cycle, `${f.label} cycle`) : '');
+  }).join('');
 }
 
 // ---------------------------------------------------------------------------
