@@ -8,19 +8,26 @@ no build step.
 
 ## Features
 
-- **Refrigerant gallery** — 14 modern and legacy refrigerants with safety
-  class, GWP (AR4/AR5), ODP, regulatory status, typical applications, and
-  replacement lineage.
+- **Refrigerant gallery** — 27 modern and legacy refrigerants, clustered by
+  family (natural → HFO → HFC → HCFC → CFC), with safety class, GWP (AR4/AR5),
+  ODP, regulatory status, typical applications, and replacement lineage.
+  Keyboard navigable (arrow keys + Enter).
 - **Property lookup** — full thermodynamic state (T, P, h, s, u, v, ρ, x, cp)
   from any supported input pair: T&P, P&h, P&s, T&quality, P&quality, plus
   saturation-row views at a given T or P (bubble/dew shown separately for
   zeotropic blends).
-- **VCRC cycle analysis** — ideal four-state cycle from evaporator and
-  condensing temperatures, with optional superheat and subcooling (ΔT from
-  saturation). Outputs state table, q_evap, q_cond, w_comp, COP for cooling
-  and heating, and an energy balance check.
-- **T-s diagram** — saturation dome, cycle overlay, lookup-state marker;
-  pannable with recenter.
+- **VCRC cycle analysis** — four-state cycle from evaporator and condensing
+  temperatures, with optional superheat/subcooling (specified as ΔT from
+  saturation or as a pressure) and compressor isentropic efficiency.
+  Outputs state table, q_evap, q_cond, w_comp, COP for cooling and heating,
+  pressure ratio, and discharge temperature.
+- **Side-by-side comparison** — run the same cycle on a second refrigerant:
+  overlaid saturation domes and cycles in distinct colors, metrics table.
+- **T-s and P-h diagrams** — saturation dome, cycle overlay with the true
+  constant-h expansion curve, lookup-state marker; pan/zoom with recenter,
+  PNG download.
+- **Export & sharing** — copy results as CSV, copy a URL that reproduces the
+  configured cycle (fluid, comparison, inputs, units, diagram).
 
 ## Refrigerants (27)
 
@@ -39,7 +46,9 @@ CoolProp tables (`tables/`). Single-phase grids are indexed by distance from
 saturation (ΔT, P) with log-P interpolation, which keeps accuracy high where
 cycles actually live. The end-to-end pipeline is held to ±1 % COP,
 ±0.5 kJ/kg enthalpy, ±0.002 kJ/kg·K entropy, and ±0.3 K temperature against
-CoolProp across a 221-case matrix (`tests/`).
+CoolProp across a ~1600-case matrix (`tests/`) spanning the cycle condition
+range, η < 1 compression, pressure-specified superheat/subcool, two-phase
+qualities, deep superheat/subcool, and near-critical interpolation.
 
 ### Accuracy notes
 
@@ -49,9 +58,9 @@ CoolProp across a 221-case matrix (`tests/`).
   two-phase temperatures lerp across the glide.
 - The cycle model is subcritical only; transcritical operation (e.g. R-744
   above 31 °C) is detected and blocked with an explanation.
-- Compression is isentropic; dry fluids (R-600a, R-1234yf) legitimately end
-  two-phase from a saturated-vapor inlet — the tool notes this rather than
-  flagging an error.
+- Compression is isentropic by default (η adjustable); dry fluids (R-600a,
+  R-1234yf) legitimately end two-phase from a saturated-vapor inlet — the
+  tool notes this rather than flagging an error.
 
 ## Development
 

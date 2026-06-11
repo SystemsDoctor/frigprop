@@ -10,13 +10,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260610c">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260611a">
 </head>
 <body>
 
   <!-- Nav -->
   <nav>
-    <div class="logo">Frig<span>Prop</span><span class="version-tag">v1.1</span></div>
+    <div class="logo">Frig<span>Prop</span><span class="version-tag">v1.2</span></div>
     <div id="nav-ref-display" class="nav-ref-display"></div>
     <div class="nav-right">
       <span id="status-pill" class="nav-badge loading">Initialising…</span>
@@ -34,7 +34,7 @@
       <div class="panel-header">
         <span class="panel-title">Select Refrigerant</span>
       </div>
-      <div id="ref-cards" class="refrig-grid"></div>
+      <div id="ref-cards" class="refrig-grid" role="radiogroup" aria-label="Refrigerant selection"></div>
     </div>
 
     <div class="app-columns">
@@ -111,7 +111,7 @@
             <span id="badge-s1" class="state-badge state-saturated">sat. vapor</span>
           </div>
           <div class="form-row">
-            <label for="T1">Evaporator Temperature</label>
+            <label for="T1" id="T1-label">Evaporator Temperature</label>
             <div class="input-group">
               <input type="number" id="T1" step="0.5" placeholder="e.g. −10" data-ph-si="e.g. −10" data-ph-ip="e.g. 14">
               <span class="input-unit" data-kind="T">°C</span>
@@ -122,11 +122,23 @@
             <span>Superheated inlet</span>
           </label>
           <div id="sh-inlet-extra" class="extra-fields hidden">
-            <div class="form-row" style="margin-top:10px">
+            <div class="spec-toggle" role="radiogroup" aria-label="Superheat specified by">
+              <span class="spec-toggle-label">Specify by</span>
+              <label><input type="radio" name="sh-by" value="dT" checked> ΔT from saturation</label>
+              <label><input type="radio" name="sh-by" value="P"> pressure</label>
+            </div>
+            <div class="form-row" id="sh-dT-row" style="margin-top:10px">
               <label for="dT-sh">Superheat above saturation</label>
               <div class="input-group">
                 <input type="number" id="dT-sh" step="0.5" min="0" placeholder="e.g. 5" data-ph-si="e.g. 5" data-ph-ip="e.g. 9">
                 <span class="input-unit" data-kind="dT">K</span>
+              </div>
+            </div>
+            <div class="form-row hidden" id="sh-P-row" style="margin-top:10px">
+              <label for="P-evap">Evaporator Pressure</label>
+              <div class="input-group">
+                <input type="number" id="P-evap" step="any" min="0" placeholder="e.g. 200" data-ph-si="e.g. 200" data-ph-ip="e.g. 29">
+                <span class="input-unit" data-kind="P">kPa</span>
               </div>
             </div>
           </div>
@@ -142,7 +154,14 @@
           <div class="derived-row">
             <span class="derived-item">P = P<sub>cond</sub></span>
             <span class="derived-sep">·</span>
-            <span class="derived-item">s = s<sub>1</sub><span class="derived-note">(isentropic)</span></span>
+            <span class="derived-item">h<sub>2</sub> = h<sub>1</sub> + (h<sub>2s</sub> − h<sub>1</sub>)/η<span class="derived-note">(isentropic at η = 100 %)</span></span>
+          </div>
+          <div class="form-row" style="margin-top:10px">
+            <label for="eta-isen">Isentropic Efficiency η</label>
+            <div class="input-group">
+              <input type="number" id="eta-isen" step="1" min="10" max="100" placeholder="100">
+              <span class="input-unit">%</span>
+            </div>
           </div>
         </div>
 
@@ -154,7 +173,7 @@
             <span id="badge-s3" class="state-badge state-subcooled">sat. liquid</span>
           </div>
           <div class="form-row">
-            <label for="T3">Condensing Temperature</label>
+            <label for="T3" id="T3-label">Condensing Temperature</label>
             <div class="input-group">
               <input type="number" id="T3" step="0.5" placeholder="e.g. 40" data-ph-si="e.g. 40" data-ph-ip="e.g. 104">
               <span class="input-unit" data-kind="T">°C</span>
@@ -165,11 +184,23 @@
             <span>Subcooled exit</span>
           </label>
           <div id="sc-exit-extra" class="extra-fields hidden">
-            <div class="form-row" style="margin-top:10px">
+            <div class="spec-toggle" role="radiogroup" aria-label="Subcooling specified by">
+              <span class="spec-toggle-label">Specify by</span>
+              <label><input type="radio" name="sc-by" value="dT" checked> ΔT from saturation</label>
+              <label><input type="radio" name="sc-by" value="P"> pressure</label>
+            </div>
+            <div class="form-row" id="sc-dT-row" style="margin-top:10px">
               <label for="dT-sc">Subcooling below saturation</label>
               <div class="input-group">
                 <input type="number" id="dT-sc" step="0.5" min="0" placeholder="e.g. 5" data-ph-si="e.g. 5" data-ph-ip="e.g. 9">
                 <span class="input-unit" data-kind="dT">K</span>
+              </div>
+            </div>
+            <div class="form-row hidden" id="sc-P-row" style="margin-top:10px">
+              <label for="P-cond">Condenser Pressure</label>
+              <div class="input-group">
+                <input type="number" id="P-cond" step="any" min="0" placeholder="e.g. 1200" data-ph-si="e.g. 1200" data-ph-ip="e.g. 174">
+                <span class="input-unit" data-kind="P">kPa</span>
               </div>
             </div>
           </div>
@@ -189,6 +220,13 @@
           </div>
         </div>
 
+        <div class="form-row" style="margin-top:6px">
+          <label for="compare-fluid">Compare With (optional)</label>
+          <select id="compare-fluid" class="lookup-select">
+            <option value="">— none —</option>
+          </select>
+        </div>
+
         <div id="range-hint" class="range-hint"></div>
 
         <button id="calc-btn" class="calc-btn" disabled>Calculate Cycle</button>
@@ -202,10 +240,15 @@
       </div>
 
       <!-- Results -->
-      <div id="results-section" class="hidden">
+      <div id="results-section" class="hidden" aria-live="polite">
 
         <div class="panel-header panel-header-sub">
           <span class="panel-title">State Properties</span>
+          <span id="states-fluid-label" class="chart-fluid-label"></span>
+          <div class="chart-btns">
+            <button id="export-csv-btn" class="chart-btn" title="Copy results as CSV to the clipboard">⧉ Copy CSV</button>
+            <button id="share-link-btn" class="chart-btn" title="Copy a link that reproduces this cycle">🔗 Copy Link</button>
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -230,7 +273,7 @@
           <span class="panel-title">Performance</span>
         </div>
 
-        <div class="results calc-body">
+        <div id="perf-single" class="results calc-body">
           <div class="section-divider" style="color:var(--accent)">Coefficient of Performance</div>
           <div class="result-row">
             <span class="result-key">COP<sub>c</sub> — Cooling</span>
@@ -251,12 +294,23 @@
             <span class="result-val result-ok" id="q-cond">—</span>
           </div>
 
-          <div class="section-divider" style="color:var(--accent2)">Work &amp; Balance</div>
+          <div class="section-divider" style="color:var(--accent2)">Work &amp; Compression</div>
           <div class="result-row">
             <span class="result-key">W<sub>comp</sub></span>
             <span class="result-val" id="w-comp">—</span>
           </div>
+          <div class="result-row">
+            <span class="result-key">Pressure ratio P<sub>cond</sub>/P<sub>evap</sub></span>
+            <span class="result-val" id="p-ratio">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-key">Discharge temperature T<sub>2</sub></span>
+            <span class="result-val" id="t-discharge">—</span>
+          </div>
         </div>
+
+        <!-- Side-by-side metrics when a comparison fluid is selected -->
+        <div id="perf-compare" class="table-wrap hidden"></div>
       </div>
 
       <!-- Error -->
@@ -264,17 +318,24 @@
 
     </div><!-- .pane (cycle analysis) -->
 
-    <!-- Pane: T-s diagram -->
+    <!-- Pane: T-s / P-h diagram -->
     <div class="pane pane-chart">
       <div class="panel-header">
-        <span class="panel-title">T-s Diagram</span>
+        <span class="panel-title">Diagram</span>
+        <div class="chart-tabs" role="tablist" aria-label="Diagram type">
+          <button id="chart-tab-ts" class="chart-tab active" role="tab" aria-selected="true">T-s</button>
+          <button id="chart-tab-ph" class="chart-tab" role="tab" aria-selected="false">P-h</button>
+        </div>
         <span id="ts-fluid-label" class="chart-fluid-label"></span>
-        <button id="ts-zoom-in-btn" class="chart-btn" title="Zoom in">＋</button>
-        <button id="ts-zoom-out-btn" class="chart-btn" title="Zoom out">－</button>
-        <button id="ts-recenter-btn" class="chart-btn" title="Reset view">⊙ Recenter</button>
+        <div class="chart-btns">
+          <button id="ts-zoom-in-btn" class="chart-btn" title="Zoom in" aria-label="Zoom in">＋</button>
+          <button id="ts-zoom-out-btn" class="chart-btn" title="Zoom out" aria-label="Zoom out">－</button>
+          <button id="ts-recenter-btn" class="chart-btn" title="Reset view">⊙ Recenter</button>
+          <button id="chart-png-btn" class="chart-btn" title="Download diagram as PNG">⬇ PNG</button>
+        </div>
       </div>
       <div class="chart-wrap">
-        <canvas id="ts-chart"></canvas>
+        <canvas id="ts-chart" role="img" aria-label="Thermodynamic diagram with saturation dome and cycle overlay"></canvas>
       </div>
     </div>
 
@@ -282,7 +343,25 @@
     </div><!-- .app-columns -->
   </div><!-- .app-body -->
 
+  <!-- Disclaimer / attribution -->
+  <footer class="site-footer" role="contentinfo">
+    <p>
+      Properties are interpolated from tables precomputed with
+      <a href="http://www.coolprop.org/" rel="noopener">CoolProp</a><span id="footer-cp-ver"></span>,
+      the reference source of truth for this tool's accuracy validation. FrigProp is intended for
+      education and preliminary engineering screening only — it is not a certified property
+      reference and must not be the sole basis for safety-critical, regulatory, or contractual design.
+    </p>
+    <p>
+      Distributed under the <a href="https://github.com/SystemsDoctor/frigprop/blob/main/LICENSE" rel="noopener">MIT License</a>.
+      This tool and its results are provided “as is”, without warranty of any kind, express or implied.
+      By using it you agree to hold the authors and contributors harmless from any claim, damage, or
+      liability arising from its use — verify all values independently before relying on them.
+    </p>
+    <p>© 2026 SystemsDoctor · KUAT Systems</p>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260610c"></script>
+  <script type="module" src="./assets/js/app.js?v=20260611a"></script>
 </body>
 </html>
