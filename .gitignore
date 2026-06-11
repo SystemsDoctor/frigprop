@@ -6,7 +6,7 @@ __pycache__/
 .Python
 *.egg-info/
 
-# Generated tables (optional — see note below)
+# Generated tables are committed artifacts (see CLAUDE.md), so not ignored:
 # tables/
 
 # OS

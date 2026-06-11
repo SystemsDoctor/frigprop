@@ -16,7 +16,7 @@ import path from 'path';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-// Tolerances (PLAN.md acceptance gates)
+// Acceptance gates (also documented in README.md and CLAUDE.md)
 const TOL = { COP_rel: 0.01, h: 0.5, s: 0.002, u: 0.5, T: 0.3, rho_rel: 0.005, P_rel: 0.005 };
 
 globalThis.fetch = async (url) => {

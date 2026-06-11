@@ -73,7 +73,7 @@ within one convention.
 
 ```bash
 python3 -c "import json; t=json.load(open('tables/R134a/superheat.json')); \
-print(t['T_values_C'], t['P_values_kPa'])"
+print(t['dT_values_K'], t['P_values_kPa'])"
 ```
 
 ## Backend input pairs (`tables.js getProps`)

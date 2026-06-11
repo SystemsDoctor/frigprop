@@ -2,7 +2,7 @@
 
 In-browser refrigerant property lookup + vapor-compression cycle analysis.
 Static site for GitHub Pages. **No build step, no bundler, no framework.**
-Roadmap and known bugs: `PLAN.md`. Data formats: `.claude/docs/data-schemas.md`.
+Roadmap: `PLAN.md`. Data formats: `.claude/docs/data-schemas.md`.
 
 ## Architecture (keep it this way)
 
@@ -15,7 +15,7 @@ Roadmap and known bugs: `PLAN.md`. Data formats: `.claude/docs/data-schemas.md`.
     is a stable contract; change internals freely, signatures only with care.
   - `cycle.js` — pure thermodynamics, no DOM.
   - `ui.js` — pure DOM rendering, no thermodynamics.
-  - `chart.js` — T-s diagram only.
+  - `chart.js` — T-s / P-h diagrams only (pure rendering, no thermodynamics).
   - `app.js` — thin controller wiring the above.
 - `tables/*.json` are **generated artifacts** — never hand-edit. Regenerate with
   `pip install coolprop orjson numpy && python3 scripts/generate_tables.py [FLUID...]`.

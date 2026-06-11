@@ -8,10 +8,6 @@
  *   State 4 — expansion exit (isenthalpic: P_evap, h=h3)
  */
 
-export async function solveState(backend, inputPair, val1, val2) {
-  return backend.getProps(inputPair, val1, val2);
-}
-
 /**
  * Compute the four VCRC states from user inputs.
  * Superheat/subcool are specified either as ΔT from saturation (pressures

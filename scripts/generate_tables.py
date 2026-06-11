@@ -75,9 +75,9 @@ FLUIDS = {
 SCHEMA_VERSION = 2
 
 # Single-phase grids are indexed by distance from saturation (ΔT) so every
-# cell is valid — see PLAN.md Phase 1.
-# extends to 300 K for steep-isentrope fluids (R718 steam, R717); cells beyond
-# an EOS temperature limit are null (unreachable, skipped by lookups)
+# cell is valid and near-saturation resolution is high (where cycles live).
+# Extends to 300 K for steep-isentrope fluids (R718 steam, R717); cells beyond
+# an EOS temperature limit are null (unreachable, skipped by lookups).
 SH_DT_VALUES_K = [0, 2, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 120, 140,
                   160, 180, 200, 250, 300]
 SC_DT_VALUES_K = [0, 1, 2, 5, 10, 15, 20, 30, 40]
