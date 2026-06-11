@@ -14,38 +14,91 @@ export async function solveState(backend, inputPair, val1, val2) {
 
 /**
  * Compute the four VCRC states from user inputs.
- * Superheat/subcool are specified as ΔT from saturation; pressures are
- * derived internally (dew pressure at T_evap, bubble pressure at T_cond).
+ * Superheat/subcool are specified either as ΔT from saturation (pressures
+ * derived internally: dew pressure at T_evap, bubble pressure at T_cond) or
+ * as an explicit pressure (T1/T3 then are the actual state temperatures).
  * @param {object} backend  — property backend (tables.js)
- * @param {object} inputs   — { T1_C, T3_C, superheat: bool, dT_sh_K,
- *                              subcool: bool, dT_sc_K }
+ * @param {object} inputs   — { T1_C, T3_C,
+ *                              superheat: bool, sh_by: "dT"|"P", dT_sh_K, P_evap_kPa,
+ *                              subcool: bool,  sc_by: "dT"|"P", dT_sc_K, P_cond_kPa,
+ *                              eta_isen: 0–1 (default 1, isentropic) }
  * @returns {Promise<object[]>} Array of 4 state objects
  */
 export async function computeVCRCStates(backend, inputs) {
   const { T1_C, T3_C, superheat: shInlet, dT_sh_K, subcool: scExit, dT_sc_K } = inputs;
+  const eta = inputs.eta_isen > 0 && inputs.eta_isen < 1 ? inputs.eta_isen : 1;
 
-  // State 1 — compressor inlet at evaporator (dew) pressure
-  const satVap = await backend.getProps("TQ", T1_C, 1.0);
-  const state1 = (shInlet && dT_sh_K > 0)
-    ? await backend.getProps("TP", T1_C + dT_sh_K, satVap.P_kPa)
-    : satVap;
+  // State 1 — compressor inlet (sat. vapor unless superheated)
+  let state1, P_evap;
+  if (shInlet && inputs.sh_by === "P") {
+    P_evap = inputs.P_evap_kPa;
+    const sat = await backend.getSatProps("P", P_evap);
+    if (T1_C < sat.T_dew_C - 0.01) {
+      throw new Error(`Inlet T=${T1_C.toFixed(1)}°C is below saturation at P=${P_evap.toFixed(0)} kPa ` +
+                      `(T_dew=${sat.T_dew_C.toFixed(1)}°C) — a superheated inlet must be at or above it`);
+    }
+    state1 = T1_C > sat.T_dew_C + 0.01
+      ? await backend.getProps("TP", T1_C, P_evap)
+      : await backend.getProps("PQ", P_evap, 1.0);
+  } else {
+    const satVap = await backend.getProps("TQ", T1_C, 1.0);
+    P_evap = satVap.P_kPa;
+    state1 = (shInlet && dT_sh_K > 0)
+      ? await backend.getProps("TP", T1_C + dT_sh_K, P_evap)
+      : satVap;
+  }
 
-  // State 3 — condenser exit at condenser (bubble) pressure
-  const satLiq = await backend.getProps("TQ", T3_C, 0.0);
-  const state3 = (scExit && dT_sc_K > 0)
-    ? await backend.getProps("TP", T3_C - dT_sc_K, satLiq.P_kPa)
-    : satLiq;
+  // State 3 — condenser exit (sat. liquid unless subcooled)
+  let state3, P_cond;
+  if (scExit && inputs.sc_by === "P") {
+    P_cond = inputs.P_cond_kPa;
+    const sat = await backend.getSatProps("P", P_cond);
+    if (T3_C > sat.T_bubble_C + 0.01) {
+      throw new Error(`Exit T=${T3_C.toFixed(1)}°C is above saturation at P=${P_cond.toFixed(0)} kPa ` +
+                      `(T_bubble=${sat.T_bubble_C.toFixed(1)}°C) — a subcooled exit must be at or below it`);
+    }
+    state3 = T3_C < sat.T_bubble_C - 0.01
+      ? await backend.getProps("TP", T3_C, P_cond)
+      : await backend.getProps("PQ", P_cond, 0.0);
+  } else {
+    const satLiq = await backend.getProps("TQ", T3_C, 0.0);
+    P_cond = satLiq.P_kPa;
+    state3 = (scExit && dT_sc_K > 0)
+      ? await backend.getProps("TP", T3_C - dT_sc_K, P_cond)
+      : satLiq;
+  }
 
-  const P_cond = satLiq.P_kPa;
-  const P_evap = satVap.P_kPa;
-
-  // State 2 — isentropic compression to P_cond
-  const state2 = await backend.getProps("PS", P_cond, state1.s);
+  // State 2 — compression to P_cond: isentropic, then η-corrected via h
+  let state2 = await backend.getProps("PS", P_cond, state1.s);
+  if (eta < 1) {
+    const h2 = state1.h + (state2.h - state1.h) / eta;
+    state2 = await backend.getProps("PH", P_cond, h2);
+  }
 
   // State 4 — isenthalpic expansion to P_evap
   const state4 = await backend.getProps("PH", P_evap, state3.h);
 
   return [state1, state2, state3, state4];
+}
+
+/**
+ * Sample the true constant-h expansion path 3→4 for diagram overlays.
+ * Points are log-spaced in P between the two states; points the tables
+ * cannot resolve are skipped (the endpoints always anchor the curve).
+ * @returns {Promise<{T_C: number, P_kPa: number, h: number, s: number}[]>}
+ */
+export async function expansionPath(backend, state3, state4, nPoints = 15) {
+  const pts = [{ T_C: state3.T_C, P_kPa: state3.P_kPa, h: state3.h, s: state3.s }];
+  const ratio = state4.P_kPa / state3.P_kPa;
+  for (let i = 1; i < nPoints; i++) {
+    const P = state3.P_kPa * Math.pow(ratio, i / nPoints);
+    try {
+      const st = await backend.getProps("PH", P, state3.h);
+      pts.push({ T_C: st.T_C, P_kPa: P, h: st.h, s: st.s });
+    } catch (_) { /* outside table coverage — straight segment bridges the gap */ }
+  }
+  pts.push({ T_C: state4.T_C, P_kPa: state4.P_kPa, h: state4.h, s: state4.s });
+  return pts;
 }
 
 /**
@@ -59,7 +112,9 @@ export function analyzeVCRC(states) {
   const Q_cond = s2.h - s3.h;
   const COP_c = Q_evap / W_comp;
   const COP_h = Q_cond / W_comp;
-  return { W_comp, Q_evap, Q_cond, COP_c, COP_h };
+  const P_ratio = s2.P_kPa / s1.P_kPa;
+  const T_discharge_C = s2.T_C;
+  return { W_comp, Q_evap, Q_cond, COP_c, COP_h, P_ratio, T_discharge_C };
 }
 
 /**

@@ -54,22 +54,34 @@ function diff(errs, name, got, want, tol, rel = false) {
 
 for (const c of truth.cycles) {
   const w = c.want;
-  const label = `cycle ${c.fluid} Te=${c.Te} Tc=${c.Tc} sh=${c.sh} sc=${c.sc}`;
+  const tag = (c.eta ? ` eta=${c.eta}` : '') +
+              (c.sh_by === 'P' ? ' shByP' : '') + (c.sc_by === 'P' ? ' scByP' : '');
+  const label = `cycle ${c.fluid} Te=${c.Te} Tc=${c.Tc} sh=${c.sh} sc=${c.sc}${tag}`;
   try {
     await backend.init(c.fluid);
+    // pressure-specified superheat/subcool: T fields hold the actual state
+    // temperatures, the saturation pressure comes from the truth case
     const inputs = {
-      T1_C: c.Te, T3_C: c.Tc,
-      superheat: c.sh > 0, dT_sh_K: c.sh,
-      subcool: c.sc > 0, dT_sc_K: c.sc,
+      T1_C: c.sh_by === 'P' ? c.Te + c.sh : c.Te,
+      T3_C: c.sc_by === 'P' ? c.Tc - c.sc : c.Tc,
+      superheat: c.sh > 0, sh_by: c.sh_by || 'dT', dT_sh_K: c.sh,
+      P_evap_kPa: c.sh_by === 'P' ? w.P1_kPa : NaN,
+      subcool: c.sc > 0, sc_by: c.sc_by || 'dT', dT_sc_K: c.sc,
+      P_cond_kPa: c.sc_by === 'P' ? w.P2_kPa : NaN,
+      eta_isen: c.eta || 1,
     };
     const states = await computeVCRCStates(backend, inputs);
     const m = analyzeVCRC(states);
     const errs = [];
+    // ΔT-grid row spacing grows to 50 K at extreme discharge superheat
+    // (steep-isentrope fluids like NH3/steam at large lifts) — allow the
+    // state-2 gates to widen with the superheat extent, never below base.
+    const shx = Math.max(0, w.T2 - c.Tc);
     diff(errs, 'COP', m.COP_c, w.COP, TOL.COP_rel, true);
     diff(errs, 'h1', states[0].h, w.h1, TOL.h);
     diff(errs, 's1', states[0].s, w.s1, TOL.s);
-    diff(errs, 'h2', states[1].h, w.h2, TOL.h);
-    diff(errs, 'T2', states[1].T_C, w.T2, TOL.T);
+    diff(errs, 'h2', states[1].h, w.h2, Math.max(TOL.h, 0.008 * shx));
+    diff(errs, 'T2', states[1].T_C, w.T2, Math.max(TOL.T, 0.0025 * shx));
     diff(errs, 'h3', states[2].h, w.h3, TOL.h);
     diff(errs, 'P1', states[0].P_kPa, w.P1_kPa, TOL.P_rel, true);
     diff(errs, 'P2', states[1].P_kPa, w.P2_kPa, TOL.P_rel, true);

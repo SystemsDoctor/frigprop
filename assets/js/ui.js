@@ -29,11 +29,38 @@ export function setStatus(state, text) {
 
 let _onRefrigerantChange = null;
 
+// Gallery cluster order: modern low-GWP families first, legacy last.
+const TYPE_RANK = ["natural", "hfo", "hfo-blend", "hcfo", "hfc", "hfc-blend", "hcfc", "cfc"];
+
+/** Group key for clustering (finer than the badge slug: blends split out). */
+function _typeRank(type) {
+  const t = (type || "").toLowerCase();
+  let group;
+  if      (t.includes("natural")) group = "natural";
+  else if (t.includes("hcfo"))    group = "hcfo";
+  else if (t.includes("hfo"))     group = t.includes("blend") ? "hfo-blend" : "hfo";
+  else if (t.includes("hcfc"))    group = "hcfc";
+  else if (t.includes("hfc"))     group = t.includes("blend") ? "hfc-blend" : "hfc";
+  else if (t.includes("cfc"))     group = "cfc";
+  else                            group = "hfc";
+  return TYPE_RANK.indexOf(group);
+}
+
+/** Sort: type cluster, then ASHRAE number, then key (R600 < R600a). */
+function _sortRefrigerantKeys(keys, allInfo) {
+  const num = k => parseInt(k.replace(/\D/g, ""), 10) || 0;
+  return [...keys].sort((a, b) => {
+    const ra = _typeRank(allInfo[a] && allInfo[a].refrigerant_type);
+    const rb = _typeRank(allInfo[b] && allInfo[b].refrigerant_type);
+    return ra - rb || num(a) - num(b) || a.localeCompare(b);
+  });
+}
+
 export function populateRefrigerantSelector(keys, allInfo) {
   const grid = $("ref-cards");
   grid.innerHTML = "";
 
-  keys.forEach(key => {
+  _sortRefrigerantKeys(keys, allInfo).forEach(key => {
     const info     = allInfo && allInfo[key];
     const typeRaw  = info ? info.refrigerant_type : "";
     const typeSlug = _typeSlug(typeRaw);
@@ -44,6 +71,10 @@ export function populateRefrigerantSelector(keys, allInfo) {
     const card = document.createElement("div");
     card.className = "ref-card";
     card.dataset.key = key;
+    card.setAttribute("role", "radio");
+    card.setAttribute("aria-checked", "false");
+    card.setAttribute("aria-label", `${info ? info.ashrae_designation : key} — ${_typeLabel(typeRaw)}`);
+    card.tabIndex = -1;
 
     card.innerHTML = `
       <div class="ref-card-name">${info ? info.ashrae_designation : key}</div>
@@ -57,12 +88,35 @@ export function populateRefrigerantSelector(keys, allInfo) {
       </div>
     `;
 
-    card.addEventListener("click", () => {
+    const select = () => {
       _selectCard(key, info);
       if (_onRefrigerantChange) _onRefrigerantChange(key);
+    };
+    card.addEventListener("click", select);
+    card.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(); }
     });
 
     grid.appendChild(card);
+  });
+
+  _wireGalleryKeyboardNav(grid);
+}
+
+/** Roving-tabindex arrow-key navigation across the card grid. */
+function _wireGalleryKeyboardNav(grid) {
+  const cards = [...grid.querySelectorAll(".ref-card")];
+  if (cards.length) cards[0].tabIndex = 0;
+  grid.addEventListener("keydown", e => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (!step) return;
+    const i = cards.indexOf(document.activeElement);
+    if (i === -1) return;
+    e.preventDefault();
+    const next = cards[(i + step + cards.length) % cards.length];
+    cards.forEach(c => { c.tabIndex = -1; });
+    next.tabIndex = 0;
+    next.focus();
   });
 }
 
@@ -81,7 +135,9 @@ function _selectCard(key, info) {
 
   // Highlight selected card
   document.querySelectorAll(".ref-card").forEach(c => {
-    c.classList.toggle("selected", c.dataset.key === key);
+    const sel = c.dataset.key === key;
+    c.classList.toggle("selected", sel);
+    c.setAttribute("aria-checked", sel ? "true" : "false");
   });
 }
 
@@ -196,6 +252,24 @@ export function renderInfoPanel(key, info, meta) {
 // Input controls
 // ---------------------------------------------------------------------------
 
+/** Selected "specify by" mode for a radio group: "dT" or "P". */
+function _specBy(name) {
+  const checked = document.querySelector(`input[name="${name}"]:checked`);
+  return checked ? checked.value : "dT";
+}
+
+/** In pressure mode the T field means the actual state temperature. */
+function _refreshStateLabels() {
+  const shP = $("sh-inlet").checked && _specBy("sh-by") === "P";
+  const scP = $("sc-exit").checked && _specBy("sc-by") === "P";
+  $("T1-label").textContent = shP ? "Compressor Inlet Temperature" : "Evaporator Temperature";
+  $("T3-label").textContent = scP ? "Condenser Exit Temperature" : "Condensing Temperature";
+  $("sh-dT-row").classList.toggle("hidden", _specBy("sh-by") === "P");
+  $("sh-P-row").classList.toggle("hidden", _specBy("sh-by") !== "P");
+  $("sc-dT-row").classList.toggle("hidden", _specBy("sc-by") === "P");
+  $("sc-P-row").classList.toggle("hidden", _specBy("sc-by") !== "P");
+}
+
 export function wireInputControls() {
   $("sh-inlet").addEventListener("change", function () {
     const extra = $("sh-inlet-extra");
@@ -207,6 +281,7 @@ export function wireInputControls() {
       extra.classList.add("hidden");
       if (badge) { badge.className = "state-badge state-saturated"; badge.textContent = "sat. vapor"; }
     }
+    _refreshStateLabels();
   });
 
   $("sc-exit").addEventListener("change", function () {
@@ -219,18 +294,75 @@ export function wireInputControls() {
       extra.classList.add("hidden");
       if (badge) { badge.className = "state-badge state-subcooled"; badge.textContent = "sat. liquid"; }
     }
+    _refreshStateLabels();
+  });
+
+  document.querySelectorAll('input[name="sh-by"], input[name="sc-by"]').forEach(r => {
+    r.addEventListener("change", _refreshStateLabels);
   });
 }
 
 export function getInputs() {
+  const etaPct = parseFloat($("eta-isen").value);
   return {
     T1_C:     units.fromInput(parseFloat($("T1").value), "T"),
     T3_C:     units.fromInput(parseFloat($("T3").value), "T"),
     superheat: $("sh-inlet").checked,
+    sh_by:    _specBy("sh-by"),
     dT_sh_K:  units.fromInput(parseFloat($("dT-sh").value), "dT"),
+    P_evap_kPa: units.fromInput(parseFloat($("P-evap").value), "P"),
     subcool:  $("sc-exit").checked,
+    sc_by:    _specBy("sc-by"),
     dT_sc_K:  units.fromInput(parseFloat($("dT-sc").value), "dT"),
+    P_cond_kPa: units.fromInput(parseFloat($("P-cond").value), "P"),
+    eta_isen: isNaN(etaPct) ? 1 : etaPct / 100,
   };
+}
+
+/** Restore cycle inputs (SI values, e.g. from a share URL). Inverse of getInputs. */
+export function applyInputs(inp) {
+  const set = (id, v, kind) => {
+    if (v !== undefined && v !== null && !isNaN(v)) $(id).value = +units.toDisplay(v, kind).toFixed(4);
+  };
+  set("T1", inp.T1_C, "T");
+  set("T3", inp.T3_C, "T");
+  set("dT-sh", inp.dT_sh_K, "dT");
+  set("P-evap", inp.P_evap_kPa, "P");
+  set("dT-sc", inp.dT_sc_K, "dT");
+  set("P-cond", inp.P_cond_kPa, "P");
+  if (inp.eta_isen !== undefined && inp.eta_isen < 1) $("eta-isen").value = Math.round(inp.eta_isen * 100);
+  for (const [name, v] of [["sh-by", inp.sh_by], ["sc-by", inp.sc_by]]) {
+    const radio = document.querySelector(`input[name="${name}"][value="${v}"]`);
+    if (radio) radio.checked = true;
+  }
+  for (const [id, on] of [["sh-inlet", inp.superheat], ["sc-exit", inp.subcool]]) {
+    $(id).checked = !!on;
+    $(id).dispatchEvent(new Event("change"));  // badge + extra-field visibility
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Comparison fluid selector
+// ---------------------------------------------------------------------------
+
+export function populateComparisonSelect(keys, allInfo) {
+  const sel = $("compare-fluid");
+  _sortRefrigerantKeys(keys, allInfo).forEach(key => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = allInfo[key] ? allInfo[key].ashrae_designation : key;
+    sel.appendChild(opt);
+  });
+}
+
+/** Comparison fluid key, or null when none / same as the primary. */
+export function getComparisonFluid(primaryKey) {
+  const v = $("compare-fluid").value;
+  return v && v !== primaryKey ? v : null;
+}
+
+export function onComparisonChange(handler) {
+  $("compare-fluid").addEventListener("change", () => handler($("compare-fluid").value || null));
 }
 
 /** Show the selected fluid's valid temperature range under the inputs. */
@@ -280,33 +412,37 @@ export function onCalcClick(handler) {
 // Property lookup pane
 // ---------------------------------------------------------------------------
 
-// field: [label, unit-kind]
+// field: [label, unit-kind, SI placeholder, IP placeholder]
 const PAIR_DEFS = {
-  TP:   { fields: [["Temperature", "T"], ["Pressure", "P"]] },
-  PH:   { fields: [["Pressure", "P"], ["Enthalpy", "h"]] },
-  PS:   { fields: [["Pressure", "P"], ["Entropy", "s"]] },
-  TQ:   { fields: [["Temperature", "T"], ["Quality", "x"]] },
-  PQ:   { fields: [["Pressure", "P"], ["Quality", "x"]] },
-  satT: { fields: [["Temperature", "T"]] },
-  satP: { fields: [["Pressure", "P"]] },
+  TP:   { fields: [["Temperature", "T", "e.g. 25", "e.g. 77"], ["Pressure", "P", "e.g. 500", "e.g. 73"]] },
+  PH:   { fields: [["Pressure", "P", "e.g. 500", "e.g. 73"], ["Enthalpy", "h", "e.g. 250", "e.g. 107"]] },
+  PS:   { fields: [["Pressure", "P", "e.g. 500", "e.g. 73"], ["Entropy", "s", "e.g. 1.15", "e.g. 0.27"]] },
+  TQ:   { fields: [["Temperature", "T", "e.g. 25", "e.g. 77"], ["Quality", "x", "e.g. 0.5", "e.g. 0.5"]] },
+  PQ:   { fields: [["Pressure", "P", "e.g. 500", "e.g. 73"], ["Quality", "x", "e.g. 0.5", "e.g. 0.5"]] },
+  satT: { fields: [["Temperature", "T", "e.g. 25", "e.g. 77"]] },
+  satP: { fields: [["Pressure", "P", "e.g. 500", "e.g. 73"]] },
 };
 
-/** Re-apply labels/units for the selected lookup pair (also on unit toggle). */
+/** Re-apply labels/units/placeholders for the selected lookup pair (also on unit toggle). */
 export function refreshLookupFields() {
   const def = PAIR_DEFS[$("lookup-pair").value];
+  const ph  = f => units.getSystem() === "IP" ? f[3] : f[2];
   $("lookup-v1-label").textContent = def.fields[0][0];
   $("lookup-v1-unit").textContent  = units.label(def.fields[0][1]);
+  $("lookup-v1").placeholder       = ph(def.fields[0]);
   const v2row = $("lookup-v2-row");
   if (def.fields.length > 1) {
     v2row.classList.remove("hidden");
     $("lookup-v2-label").textContent = def.fields[1][0];
     $("lookup-v2-unit").textContent  = units.label(def.fields[1][1]);
+    $("lookup-v2").placeholder       = ph(def.fields[1]);
   } else {
     v2row.classList.add("hidden");
   }
 }
 
 export function wireLookupControls(onSubmit) {
+  refreshLookupFields();  // initial labels + placeholders
   $("lookup-pair").addEventListener("change", () => {
     refreshLookupFields();
     $("lookup-result").classList.add("hidden");
@@ -435,8 +571,26 @@ function fmtX(x) {
   return `<span class="val-x-twophase">${fmt(x, 3)}</span>`;
 }
 
-export function renderResults(states, metrics, warnings, notes) {
+// metric rows shared by the single and comparison performance views:
+// [label (HTML), metrics key, unit-kind|null, decimals]
+const METRIC_ROWS = [
+  ["COP<sub>c</sub> — Cooling",  "COP_c",         null, 3],
+  ["COP<sub>h</sub> — Heating",  "COP_h",         null, 3],
+  ["Q<sub>evap</sub>",           "Q_evap",        "h",  2],
+  ["Q<sub>cond</sub>",           "Q_cond",        "h",  2],
+  ["W<sub>comp</sub>",           "W_comp",        "h",  2],
+  ["Pressure ratio",             "P_ratio",       null, 2],
+  ["Discharge T<sub>2</sub>",    "T_discharge_C", "T",  1],
+];
+
+/**
+ * Render the cycle results.
+ * @param {object}      primary     — { key, states, metrics, warnings, notes }
+ * @param {object|null} comparison  — { key, states, metrics } for side-by-side
+ */
+export function renderResults(primary, comparison) {
   clearError();
+  const { states, metrics, warnings, notes } = primary;
 
   const wbox = $("warnings-box");
   if (warnings && warnings.length) {
@@ -456,6 +610,8 @@ export function renderResults(states, metrics, warnings, notes) {
       nbox.classList.add("hidden");
     }
   }
+
+  $("states-fluid-label").textContent = comparison ? `${primary.key} (primary)` : primary.key;
 
   const tbody = $("results-tbody");
   tbody.innerHTML = "";
@@ -481,12 +637,64 @@ export function renderResults(states, metrics, warnings, notes) {
     tbody.appendChild(tr);
   });
 
-  const hUnit = units.label("h");
-  $("cop-c").textContent = fmt(metrics.COP_c, 3);
-  $("cop-h").textContent = fmt(metrics.COP_h, 3);
-  $("q-evap").innerHTML  = `${du(metrics.Q_evap, "h", 2)} <span class="unit">${hUnit}</span>`;
-  $("q-cond").innerHTML  = `${du(metrics.Q_cond, "h", 2)} <span class="unit">${hUnit}</span>`;
-  $("w-comp").innerHTML  = `${du(metrics.W_comp, "h", 2)} <span class="unit">${hUnit}</span>`;
+  if (comparison) {
+    _renderComparisonMetrics(primary, comparison);
+  } else {
+    const hUnit = units.label("h");
+    $("cop-c").textContent = fmt(metrics.COP_c, 3);
+    $("cop-h").textContent = fmt(metrics.COP_h, 3);
+    $("q-evap").innerHTML  = `${du(metrics.Q_evap, "h", 2)} <span class="unit">${hUnit}</span>`;
+    $("q-cond").innerHTML  = `${du(metrics.Q_cond, "h", 2)} <span class="unit">${hUnit}</span>`;
+    $("w-comp").innerHTML  = `${du(metrics.W_comp, "h", 2)} <span class="unit">${hUnit}</span>`;
+    $("p-ratio").textContent = fmt(metrics.P_ratio, 2);
+    $("t-discharge").innerHTML = `${du(metrics.T_discharge_C, "T", 1)} <span class="unit">${units.label("T")}</span>`;
+  }
+  $("perf-single").classList.toggle("hidden", !!comparison);
+  $("perf-compare").classList.toggle("hidden", !comparison);
 
   $("results-section").classList.remove("hidden");
+}
+
+/** Side-by-side metrics table for the two compared fluids. */
+function _renderComparisonMetrics(primary, comparison) {
+  const box = $("perf-compare");
+  const cell = (m, [, key, kind, dec]) => {
+    const v = m[key];
+    const txt = kind ? `${du(v, kind, dec)} <span class="unit">${units.label(kind)}</span>` : fmt(v, dec);
+    return `<td>${txt}</td>`;
+  };
+  box.innerHTML = `
+    <table class="results-table" aria-label="Performance comparison">
+      <thead><tr><th style="text-align:left">Metric</th><th>${primary.key}</th><th>${comparison.key}</th></tr></thead>
+      <tbody>
+        ${METRIC_ROWS.map(r => `
+          <tr><td style="text-align:left;color:var(--text-dim)">${r[0]}</td>
+          ${cell(primary.metrics, r)}${cell(comparison.metrics, r)}</tr>`).join("")}
+      </tbody>
+    </table>`;
+}
+
+/** Build a CSV export (current display units) of states + performance. */
+export function buildResultsCSV(primary, comparison) {
+  const L = k => units.label(k);
+  const lines = [];
+  const block = ({ key, states, metrics }) => {
+    lines.push(`Fluid,${key}`);
+    lines.push(`State,T (${L("T")}),P (${L("P")}),h (${L("h")}),s (${L("s")}),u (${L("u")}),x,rho (${L("rho")})`);
+    states.forEach((s, i) => lines.push([
+      i + 1, du(s.T_C, "T", 2), du(s.P_kPa, "P", 2), du(s.h, "h", 2),
+      du(s.s, "s", 4), du(s.u, "u", 2), s.x === null ? "" : fmt(s.x, 4),
+      du(s.rho, "rho", 3),
+    ].join(",")));
+    lines.push(`COP_c,${fmt(metrics.COP_c, 3)}`);
+    lines.push(`COP_h,${fmt(metrics.COP_h, 3)}`);
+    lines.push(`Q_evap (${L("h")}),${du(metrics.Q_evap, "h", 2)}`);
+    lines.push(`Q_cond (${L("h")}),${du(metrics.Q_cond, "h", 2)}`);
+    lines.push(`W_comp (${L("h")}),${du(metrics.W_comp, "h", 2)}`);
+    lines.push(`Pressure ratio,${fmt(metrics.P_ratio, 2)}`);
+    lines.push(`Discharge T2 (${L("T")}),${du(metrics.T_discharge_C, "T", 1)}`);
+  };
+  block(primary);
+  if (comparison) { lines.push(""); block(comparison); }
+  return lines.join("\n") + "\n";
 }

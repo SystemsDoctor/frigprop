@@ -20,6 +20,17 @@
 > conversion checks. Round 2 (v1.1): property tooltips, T-s zoom buttons,
 > evaporator isobar path fix, energy-balance row removed, SI⇄US toggle
 > implemented per Phase 5, version tag in nav.
+> Round 3 (v1.2): stretch goals G1 (isentropic efficiency), G3 (P-h diagram
+> tab, log-P axis), G4 (two-fluid comparison: overlaid domes/cycles in
+> distinct colors + side-by-side metrics), G6 (CSV copy, chart PNG download,
+> share URLs), G7 (true constant-h expansion curve via `cycle.js
+> expansionPath`), G12 (gallery keyboard nav, ARIA roles, focus styles).
+> Also: gallery clustered by refrigerant family, superheat/subcool specified
+> by ΔT *or* pressure, lookup placeholders per input pair, grouped chart
+> buttons, footer disclaimer/attribution, harness expanded 221 → ~1600 cases
+> (η, pressure-mode, wet-PS, deep superheat/subcool, near-critical; state-2
+> gates widen proportionally at extreme discharge superheat where ΔT-grid
+> rows are 50 K apart), chart `update('active')` hover-state bug fixed.
 > Future work: see section G (stretch goals).
 
 ---
