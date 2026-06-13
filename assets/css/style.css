@@ -1069,6 +1069,50 @@ nav {
 
 .site-footer a:hover { color: var(--accent); }
 
+/* About details — collapsible, crawlable, footer-toned */
+.about-details {
+  margin-bottom: 10px;
+}
+
+.about-details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  user-select: none;
+  margin-bottom: 4px;
+}
+
+.about-details summary::-webkit-details-marker { display: none; }
+
+.about-details summary::before {
+  content: '▶';
+  font-size: 7px;
+  opacity: 0.6;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.about-details[open] summary::before { transform: rotate(90deg); }
+
+.about-details summary:hover { color: var(--text); }
+
+.about-body {
+  padding: 6px 0 4px 12px;
+  border-left: 1px solid var(--border);
+  max-width: 900px;
+}
+
+.about-body p {
+  margin-bottom: 5px;
+  line-height: 1.65;
+}
+
+.about-body strong { color: var(--text); font-weight: 500; }
+
 /* =========================================================
    Accessibility — keyboard focus
    ========================================================= */

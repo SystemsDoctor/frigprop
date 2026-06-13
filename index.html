@@ -3,14 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FrigProp — Refrigerant Properties</title>
+  <title>FrigProp — Refrigerant Property Calculator &amp; Cycle Analysis</title>
+  <meta name="description" content="Free in-browser refrigerant properties calculator and vapor-compression cycle analysis tool. Look up thermodynamic properties for 27 refrigerants — R-32, R-1234yf, R-410A, CO₂, ammonia — with interactive T-s/P-h diagrams and COP calculations.">
+  <link rel="canonical" href="https://www.frigprop.com/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.frigprop.com/">
+  <meta property="og:site_name" content="FrigProp">
+  <meta property="og:title" content="FrigProp — Refrigerant Property Calculator &amp; Cycle Analysis">
+  <meta property="og:description" content="Free in-browser tool for refrigerant property lookup and vapor-compression cycle analysis. 27 fluids, interactive T-s/P-h diagrams, COP calculations, SI and US customary units.">
+  <meta property="og:image" content="https://www.frigprop.com/assets/img/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FrigProp — refrigerant thermodynamic diagrams and cycle analysis tool">
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="FrigProp — Refrigerant Property Calculator &amp; Cycle Analysis">
+  <meta name="twitter:description" content="Free in-browser tool for refrigerant property lookup and vapor-compression cycle analysis. 27 fluids, T-s/P-h diagrams, COP, SI and US units.">
+  <meta name="twitter:image" content="https://www.frigprop.com/assets/img/og-image.png">
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "FrigProp",
+    "url": "https://www.frigprop.com/",
+    "description": "Interactive refrigerant property lookup and vapor-compression refrigeration cycle analysis tool. Supports 27 refrigerants including R-32, R-1234yf, R-410A, R-744 (CO₂), and R-717 (ammonia). Computes thermodynamic state properties, COP, compressor work, and heat transfer. Renders T-s and P-h diagrams.",
+    "applicationCategory": "EngineeringSoftware",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "KUAT Systems"
+    },
+    "featureList": [
+      "Thermodynamic property lookup for 27 refrigerants",
+      "Vapor-compression refrigeration cycle analysis",
+      "COP calculation (cooling and heating)",
+      "Interactive T-s and P-h diagrams with saturation dome",
+      "Side-by-side refrigerant comparison",
+      "Superheat and subcooling inputs",
+      "SI and US customary unit systems",
+      "CSV export and shareable cycle links"
+    ]
+  }
+  </script>
+
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="96x96" href="./assets/img/favicon.png?v=20260610e">
   <link rel="apple-touch-icon" href="./assets/img/favicon.png?v=20260610e">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260611b">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260612a">
 </head>
 <body>
 
@@ -346,6 +398,23 @@
 
   <!-- Disclaimer / attribution -->
   <footer class="site-footer" role="contentinfo">
+
+    <details class="about-details">
+      <summary>About FrigProp</summary>
+      <div class="about-body">
+        <p>FrigProp is a free, browser-based refrigerant properties calculator and vapor-compression refrigeration cycle (VCRC) analysis tool. No installation required — all computation runs locally in your browser using precomputed thermodynamic property tables sourced from <a href="http://www.coolprop.org/" rel="noopener">CoolProp</a>.</p>
+        <p><strong>Property lookup</strong> — specify any two independent properties (temperature &amp; pressure, pressure &amp; enthalpy, pressure &amp; entropy, temperature &amp; quality, or saturation state) and retrieve the full thermodynamic state: temperature, pressure, specific enthalpy, specific entropy, internal energy, specific volume, density, and vapor quality.</p>
+        <p><strong>Cycle analysis</strong> — set evaporator and condensing temperatures, optional superheat and subcooling, and isentropic efficiency to compute the coefficient of performance (COP) for cooling and heating modes, compressor work, evaporator and condenser heat transfer, pressure ratio, and compressor discharge temperature. Results include an interactive T-s or P-h diagram with the saturation dome and all four cycle state points. Two refrigerants can be analyzed side-by-side for direct comparison.</p>
+        <p><strong>Supported refrigerants (27):</strong>
+          Modern low-GWP HFOs and blends — R-32, R-1234yf, R-1234ze(E), R-1233zd(E), R-454B, R-452B, R-513A, R-152a;
+          common HFCs — R-134a, R-410A, R-407C, R-404A, R-507A, R-23;
+          legacy refrigerants — R-22, R-123, R-12, R-11;
+          natural refrigerants — R-744 (CO₂), R-717 (ammonia/NH₃), R-290 (propane), R-1270 (propylene), R-600a (isobutane), R-600 (n-butane), R-170 (ethane), R-718 (water/steam), R-E170 (dimethyl ether).
+        </p>
+        <p>Results can be exported as CSV or shared via a URL that reproduces the exact cycle configuration. Units toggle between SI (°C, kPa, kJ/kg) and US customary (°F, psia, BTU/lb). FrigProp is intended for HVAC engineers, refrigeration system designers, mechanical engineering students, and anyone performing preliminary refrigerant selection or equipment screening.</p>
+      </div>
+    </details>
+
     <p>
       Properties are interpolated from tables precomputed with
       <a href="http://www.coolprop.org/" rel="noopener">CoolProp</a><span id="footer-cp-ver"></span>,
