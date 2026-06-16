@@ -36,6 +36,38 @@ curve, and an accessibility pass.
 6. **PWA/offline support** — service worker caching tables; the app is
    fully static so this is mostly manifest + cache plumbing.
 
+## Additional proposed innovations (from code audit)
+
+7. **Capacity + mass-flow inputs** — add an optional system capacity field
+   (kW or tons of refrigeration) so the tool can output actual compressor
+   power (kW), refrigerant mass-flow rate (kg/s), and pipe/component sizing
+   hints. Requires no new table data; pure arithmetic on existing metrics.
+8. **Carnot / second-law efficiency** — display COP relative to the ideal
+   Carnot COP for the same temperature lift, and a second-law (exergetic)
+   efficiency percentage. Needs only T1 and T3 in Kelvin.
+9. **Refrigerant gallery filter bar** — a small row of toggle chips above
+   the gallery (All | Natural | HFO | HFC | Low-GWP | A1-only) to narrow
+   down the 27-card grid. Pure DOM filter on existing card attributes; no
+   backend changes.
+10. **Saturation property table export** — a button that tabulates the
+    saturation line (T, P_sat, h_f, h_g, s_f, s_g, ρ_f, ρ_g) over the
+    full temperature range and copies it as CSV. Backend data already exists
+    in `sat.json`; only a small UI pane needed.
+11. **Interactive diagram state picker** — clicking a point on the T-s or
+    P-h canvas fires a property lookup at those coordinates (inverse
+    interpolation already exists in `tables.js`). Makes the diagram a
+    teaching tool as well as a display.
+12. **History / pinned cycles** — a collapsible sidebar panel listing the
+    last N calculated cycles (stored in `sessionStorage`) with quick-recall
+    buttons. Allows fast before/after comparisons when tweaking inputs.
+13. **Cycle sensitivity sweep** — "vary evaporator T from X to Y in Z steps"
+    micro-mode that plots COP vs temperature as a sparkline. Runs existing
+    `computeVCRCStates` in a loop; no new backend data needed.
+14. **Mollier (P-h) table generator** — tabulate superheated vapor properties
+    on a regular (T, P) grid for the selected refrigerant and export as CSV
+    or formatted HTML. Useful for hand-checking interpolation or classroom
+    handouts.
+
 ## Working notes for contributors
 
 - Truth source is CoolProp; regenerate cases with `scripts/gen_truth.py`

@@ -40,7 +40,7 @@ async function init() {
 
   try {
     // Pre-load manifest (no fluid yet)
-    await backend.init("R134a");  // loads manifest + R134a tables as default
+    await backend.init("R134a");  // bootstraps manifest; tables.js requires a valid key
     const cpVer = backend.getManifest().coolprop_version;
     const verEl = document.getElementById("footer-cp-ver");
     if (verEl && cpVer) verEl.textContent = ` v${cpVer}`;
@@ -53,7 +53,10 @@ async function init() {
     populateComparisonSelect(keys, allInfo);
     setStatus("ready", "Ready");
 
-    const startKey = backend.getFluidMeta(params.get("f")) ? params.get("f") : "R134a";
+    // Default to the first card in gallery sort order, not a hardcoded key
+    const firstCard = document.querySelector("#ref-cards .ref-card");
+    const defaultKey = (firstCard && firstCard.dataset.key) || "R32";
+    const startKey = backend.getFluidMeta(params.get("f")) ? params.get("f") : defaultKey;
     await selectFluid(startKey);
     await _applyShareParams(params);
 
