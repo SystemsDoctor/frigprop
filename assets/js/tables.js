@@ -21,15 +21,18 @@ let _ready = false;
 // ---------------------------------------------------------------------------
 
 export default {
-  async init(fluidKey) {
-    if (!_manifest) {
-      const res = await fetch(`${TABLES_BASE}/manifest.json`);
-      if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
-      _manifest = await res.json();
-      if (_manifest.schema_version !== SCHEMA_VERSION) {
-        throw new Error(`Table schema ${_manifest.schema_version} ≠ expected ${SCHEMA_VERSION} — regenerate with scripts/generate_tables.py`);
-      }
+  async loadManifest() {
+    if (_manifest) return;
+    const res = await fetch(`${TABLES_BASE}/manifest.json`);
+    if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
+    _manifest = await res.json();
+    if (_manifest.schema_version !== SCHEMA_VERSION) {
+      throw new Error(`Table schema ${_manifest.schema_version} ≠ expected ${SCHEMA_VERSION} — regenerate with scripts/generate_tables.py`);
     }
+  },
+
+  async init(fluidKey) {
+    if (!_manifest) await this.loadManifest();
     if (!_manifest.fluids[fluidKey]) {
       throw new Error(`Unknown fluid: ${fluidKey}`);
     }

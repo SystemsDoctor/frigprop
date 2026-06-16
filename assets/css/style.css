@@ -1069,6 +1069,16 @@ nav {
 
 .site-footer a:hover { color: var(--accent); }
 
+/* About banner — wrapper above the refrigerant gallery */
+.about-banner {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
 /* About details — collapsible, crawlable, footer-toned */
 .about-details {
   margin-bottom: 10px;

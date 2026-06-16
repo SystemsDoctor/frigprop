@@ -28,19 +28,18 @@ let lastInputs = null;  // SI inputs of the last successful calculation
 let lastLookup = null;  // { kind: "state"|"sat", data, phaseLabel }
 
 async function init() {
-  wireInputControls();
-  wireLookupControls(handleLookup);
-  onUnitToggle(handleUnitToggle);
-  initCharts();
-
+  // Resolve unit system from URL before wiring controls so labels render correctly once.
   const params = new URLSearchParams(location.search);
   if (params.get("u") === "IP") units.setSystem("IP");
-  refreshUnitLabels();  // apply persisted/shared unit system
-  refreshLookupFields();
+
+  wireInputControls();
+  wireLookupControls(handleLookup);  // calls refreshLookupFields() internally
+  onUnitToggle(handleUnitToggle);
+  initCharts();
+  refreshUnitLabels();
 
   try {
-    // Pre-load manifest (no fluid yet)
-    await backend.init("R134a");  // loads manifest + R134a tables as default
+    await backend.loadManifest();  // fetches manifest without pre-loading any fluid tables
     const cpVer = backend.getManifest().coolprop_version;
     const verEl = document.getElementById("footer-cp-ver");
     if (verEl && cpVer) verEl.textContent = ` v${cpVer}`;
@@ -53,7 +52,10 @@ async function init() {
     populateComparisonSelect(keys, allInfo);
     setStatus("ready", "Ready");
 
-    const startKey = backend.getFluidMeta(params.get("f")) ? params.get("f") : "R134a";
+    // Default to the first card in gallery sort order, not a hardcoded key
+    const firstCard = document.querySelector("#ref-cards .ref-card");
+    const defaultKey = (firstCard && firstCard.dataset.key) || "R32";
+    const startKey = backend.getFluidMeta(params.get("f")) ? params.get("f") : defaultKey;
     await selectFluid(startKey);
     await _applyShareParams(params);
 
@@ -129,6 +131,7 @@ async function handleComparisonChange() {
       await backend.init(compKey);
       await backend.init(currentFluidKey);  // cached — restores current fluid
     } catch (err) {
+      document.getElementById("compare-fluid").value = "";
       showError(`Failed to load comparison fluid ${compKey}: ${err.message}`);
       return;
     }
@@ -227,6 +230,11 @@ async function handleCalc() {
     }
     if (!shByP && !scByP && inputs.T3_C <= inputs.T1_C) {
       showError(`Condensing temperature (${dt(inputs.T3_C)} ${L}) must exceed evaporator temperature (${dt(inputs.T1_C)} ${L}).`); return;
+    }
+    if (shByP && scByP && inputs.P_cond_kPa <= inputs.P_evap_kPa) {
+      const dp = v => units.toDisplay(v, "P").toFixed(0);
+      const LP = units.label("P");
+      showError(`Condenser pressure (${dp(inputs.P_cond_kPa)} ${LP}) must exceed evaporator pressure (${dp(inputs.P_evap_kPa)} ${LP}).`); return;
     }
   }
 

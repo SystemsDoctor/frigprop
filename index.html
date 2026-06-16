@@ -51,7 +51,7 @@
       "Side-by-side refrigerant comparison",
       "Superheat and subcooling inputs",
       "SI and US customary unit systems",
-      "CSV export and shareable cycle links"
+      "Cycle diagram PNG download"
     ]
   }
   </script>
@@ -62,7 +62,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260612a">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260616a">
 </head>
 <body>
 
@@ -77,6 +77,25 @@
       </button>
     </div>
   </nav>
+
+  <!-- About FrigProp — collapsible, crawlable -->
+  <div class="about-banner">
+    <details class="about-details">
+      <summary>About FrigProp</summary>
+      <div class="about-body">
+        <p>FrigProp is a free, browser-based refrigerant properties calculator and vapor-compression refrigeration cycle (VCRC) analysis tool. No installation required — all computation runs locally in your browser using precomputed thermodynamic property tables sourced from <a href="http://www.coolprop.org/" rel="noopener">CoolProp</a>.</p>
+        <p><strong>Property lookup</strong> — specify any two independent properties (temperature &amp; pressure, pressure &amp; enthalpy, pressure &amp; entropy, temperature &amp; quality, or saturation state) and retrieve the full thermodynamic state: temperature, pressure, specific enthalpy, specific entropy, internal energy, specific volume, density, and vapor quality.</p>
+        <p><strong>Cycle analysis</strong> — set evaporator and condensing temperatures, optional superheat and subcooling, and isentropic efficiency to compute the coefficient of performance (COP) for cooling and heating modes, compressor work, evaporator and condenser heat transfer, pressure ratio, and compressor discharge temperature. Results include an interactive T-s or P-h diagram with the saturation dome and all four cycle state points. Two refrigerants can be analyzed side-by-side for direct comparison.</p>
+        <p><strong>Supported refrigerants (27):</strong>
+          Modern low-GWP HFOs and blends — R-32, R-1234yf, R-1234ze(E), R-1233zd(E), R-454B, R-452B, R-513A, R-152a;
+          common HFCs — R-134a, R-410A, R-407C, R-404A, R-507A, R-23;
+          legacy refrigerants — R-22, R-123, R-12, R-11;
+          natural refrigerants — R-744 (CO₂), R-717 (ammonia/NH₃), R-290 (propane), R-1270 (propylene), R-600a (isobutane), R-600 (n-butane), R-170 (ethane), R-718 (water/steam), R-E170 (dimethyl ether).
+        </p>
+        <p>The cycle diagram can be downloaded as a PNG image using the ⬇ PNG button in the diagram toolbar. Units toggle between SI (°C, kPa, kJ/kg) and US customary (°F, psia, BTU/lb). FrigProp is intended for HVAC engineers, refrigeration system designers, mechanical engineering students, and anyone performing preliminary refrigerant selection or equipment screening.</p>
+      </div>
+    </details>
+  </div>
 
   <!-- Tiled layout -->
   <div class="app-body">
@@ -399,22 +418,6 @@
   <!-- Disclaimer / attribution -->
   <footer class="site-footer" role="contentinfo">
 
-    <details class="about-details">
-      <summary>About FrigProp</summary>
-      <div class="about-body">
-        <p>FrigProp is a free, browser-based refrigerant properties calculator and vapor-compression refrigeration cycle (VCRC) analysis tool. No installation required — all computation runs locally in your browser using precomputed thermodynamic property tables sourced from <a href="http://www.coolprop.org/" rel="noopener">CoolProp</a>.</p>
-        <p><strong>Property lookup</strong> — specify any two independent properties (temperature &amp; pressure, pressure &amp; enthalpy, pressure &amp; entropy, temperature &amp; quality, or saturation state) and retrieve the full thermodynamic state: temperature, pressure, specific enthalpy, specific entropy, internal energy, specific volume, density, and vapor quality.</p>
-        <p><strong>Cycle analysis</strong> — set evaporator and condensing temperatures, optional superheat and subcooling, and isentropic efficiency to compute the coefficient of performance (COP) for cooling and heating modes, compressor work, evaporator and condenser heat transfer, pressure ratio, and compressor discharge temperature. Results include an interactive T-s or P-h diagram with the saturation dome and all four cycle state points. Two refrigerants can be analyzed side-by-side for direct comparison.</p>
-        <p><strong>Supported refrigerants (27):</strong>
-          Modern low-GWP HFOs and blends — R-32, R-1234yf, R-1234ze(E), R-1233zd(E), R-454B, R-452B, R-513A, R-152a;
-          common HFCs — R-134a, R-410A, R-407C, R-404A, R-507A, R-23;
-          legacy refrigerants — R-22, R-123, R-12, R-11;
-          natural refrigerants — R-744 (CO₂), R-717 (ammonia/NH₃), R-290 (propane), R-1270 (propylene), R-600a (isobutane), R-600 (n-butane), R-170 (ethane), R-718 (water/steam), R-E170 (dimethyl ether).
-        </p>
-        <p>Results can be exported as CSV or shared via a URL that reproduces the exact cycle configuration. Units toggle between SI (°C, kPa, kJ/kg) and US customary (°F, psia, BTU/lb). FrigProp is intended for HVAC engineers, refrigeration system designers, mechanical engineering students, and anyone performing preliminary refrigerant selection or equipment screening.</p>
-      </div>
-    </details>
-
     <p>
       Properties are interpolated from tables precomputed with
       <a href="http://www.coolprop.org/" rel="noopener">CoolProp</a><span id="footer-cp-ver"></span>,
@@ -432,6 +435,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260611c"></script>
+  <script type="module" src="./assets/js/app.js?v=20260616a"></script>
 </body>
 </html>
