@@ -67,6 +67,14 @@ curve, and an accessibility pass.
     on a regular (T, P) grid for the selected refrigerant and export as CSV
     or formatted HTML. Useful for hand-checking interpolation or classroom
     handouts.
+15. **Faint isobar / isotherm grid lines on diagrams** — draw a sparse set of
+    constant-pressure lines (isobars) on the T-s diagram and constant-temperature
+    lines (isotherms) on the P-h diagram, rendered as thin, low-opacity strokes
+    behind the saturation dome and cycle path. Pressures/temperatures sampled
+    at round values spanning the visible range; each line labeled at one edge.
+    Implemented in `chart.js` as an additional dataset (type: "line", pointRadius: 0)
+    per iso-line, using existing `getProps("TP", ...)` calls over a sweep of entropy
+    or enthalpy values. Lines recomputed on zoom/recenter so labels stay in view.
 
 ## Working notes for contributors
 
