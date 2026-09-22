@@ -9,9 +9,11 @@ qualities, PH/PS inversion (incl. wet PS), near-critical interpolation, and
 the historical failure modes (near-saturation PS for R404A/R290, near-critical
 R134a Tc=95, the R744 subcritical band, 1-10 K subcooling).
 
-Two-phase truth uses the tool's documented linear-in-quality convention
-between the CoolProp-exact saturation endpoints (exact for pure fluids,
-mid-glide approximation for zeotropic blends).
+Two-phase h/s/u/rho truth mixes the CoolProp-exact saturation endpoints
+linearly in quality (the tool's documented convention); two-phase T is the
+CoolProp equilibrium temperature at that (P, h), so zeotropic glide
+curvature is held to the T gate. Cycle cases also carry the glide-aware
+coil temperatures (evaporator inlet T4, dew/bubble at both pressures).
 """
 
 import json
@@ -78,15 +80,28 @@ def isentropic_to(cp_name, P_Pa, s1):
         return CP.PropsSI("H", "T", T2, "P", P_Pa, cp_name), T2
 
 
+def T_two_phase(cp_name, P_Pa, h):
+    """Equilibrium T at (P, h) inside the dome. Bisects on vapor quality —
+    PQ flashes converge for mixture models where PH flashes fail."""
+    Tb = CP.PropsSI("T", "P", P_Pa, "Q", 0, cp_name)
+    Td = CP.PropsSI("T", "P", P_Pa, "Q", 1, cp_name)
+    if abs(Td - Tb) < 1e-6:
+        return Tb
+    lo, hi = 0.0, 1.0
+    for _ in range(30):
+        q = (lo + hi) / 2
+        if CP.PropsSI("H", "P", P_Pa, "Q", q, cp_name) < h:
+            lo = q
+        else:
+            hi = q
+    return CP.PropsSI("T", "P", P_Pa, "Q", (lo + hi) / 2, cp_name)
+
+
 def T_from_PH(cp_name, P_Pa, h):
     """T after a P,h flash; handles wet states and mixture flash failures."""
     hg = CP.PropsSI("H", "P", P_Pa, "Q", 1, cp_name)
-    if h < hg:  # inside the dome — linear-in-quality T across the glide
-        hf = CP.PropsSI("H", "P", P_Pa, "Q", 0, cp_name)
-        x = (h - hf) / (hg - hf)
-        Tb = CP.PropsSI("T", "P", P_Pa, "Q", 0, cp_name)
-        Td = CP.PropsSI("T", "P", P_Pa, "Q", 1, cp_name)
-        return Tb + x * (Td - Tb)
+    if h < hg:  # inside the dome
+        return T_two_phase(cp_name, P_Pa, h)
     try:
         return CP.PropsSI("T", "P", P_Pa, "H", h, cp_name)
     except ValueError:
@@ -119,6 +134,11 @@ def cycle_truth(cp_name, Te_C, Tc_C, sh_K, sc_K, eta=1.0):
         "T2": T2 - 273.15, "h3": h3 / 1000.0,
         "P1_kPa": P1 / 1000.0, "P2_kPa": P2 / 1000.0,
         "W": W, "Qe": Qe, "COP": Qe / W,
+        # glide-aware coil temperatures
+        "T4": T_two_phase(cp_name, P1, h3) - 273.15,
+        "T_dew_evap": CP.PropsSI("T", "P", P1, "Q", 1, cp_name) - 273.15,
+        "T_dew_cond": CP.PropsSI("T", "P", P2, "Q", 1, cp_name) - 273.15,
+        "T_bub_cond": CP.PropsSI("T", "P", P2, "Q", 0, cp_name) - 273.15,
     }
 
 
@@ -171,7 +191,8 @@ def sat_side(cp_name, key, val, Q):
 
 def mix_want(f, g, x):
     """Two-phase state by linear-in-quality mixing of saturation endpoints
-    (the tool's convention; exact for pure fluids, mid-glide for blends)."""
+    (the tool's convention for h/s/u/rho). P-keyed callers replace T_C with
+    the equilibrium value from T_two_phase()."""
     lerp = lambda a, b: a + x * (b - a)
     return {
         "T_C":   lerp(f["T"], g["T"]) - 273.15,
@@ -223,8 +244,11 @@ def props_cases(fluid_key, cfg, cp_name, T_crit_C, P_crit_kPa):
             cases.append({"pair": "TQ", "v1": Tref_C, "v2": x, "want": w})
         fP = sat_side(cp_name, "P", P, 0)
         gP = sat_side(cp_name, "P", P, 1)
-        cases.append({"pair": "PQ", "v1": P_kPa, "v2": 0.5, "want": mix_want(fP, gP, 0.5)})
+        mid = mix_want(fP, gP, 0.5)
+        mid["T_C"] = T_two_phase(cp_name, P, mid["h"] * 1000.0) - 273.15
+        cases.append({"pair": "PQ", "v1": P_kPa, "v2": 0.5, "want": mid})
         wet = mix_want(fP, gP, 0.85)
+        wet["T_C"] = T_two_phase(cp_name, P, wet["h"] * 1000.0) - 273.15
         cases.append({"pair": "PS", "v1": P_kPa, "v2": wet["s"], "want": wet})
 
     # near-critical interpolation (between the 0.80/0.90·P_crit anchors) —

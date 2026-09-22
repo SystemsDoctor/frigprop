@@ -21,6 +21,11 @@ open state in `localStorage`) with the two-fluid comparison moved into it.
 Active advanced options flag the results, diagram and section headers via
 `setAdvancedMarkers()` in `ui.js` (labels built in `app.js
 _refreshAdvancedMarkers()` — add each new cycle-altering option there).
+Glide-aware coil profiles (`coilProfiles()` in `cycle.js`) show evaporator
+inlet → dew and condenser dew → bubble temperatures, glides and means for
+zeotropes; two-phase T across a glide is now quadratic through the
+mid-glide point (R-449A evaporator-inlet error 0.47 K → 0.12 K vs CoolProp
+equilibrium), with truth cases for all four coil temperatures.
 
 ## Design principle — two tiers
 
@@ -54,10 +59,6 @@ Each advanced calculation ships with CoolProp-truth cases in
 
 ## Basic improvements (main face)
 
-B2. **Glide-aware coil profiles** — for zeotropes, show dew/bubble
-    entry/exit temperatures in the existing results (bubble/dew columns
-    already in `sat.json`). Directly useful for R-449A (~5 K glide),
-    R-407C, R-454B.
 B3. **Faint isobar / isotherm grid lines on diagrams** — sparse
     constant-P lines on T-s and constant-T lines on P-h, thin low-opacity
     strokes behind the dome and cycle path, round values across the visible
@@ -85,7 +86,7 @@ A1. **Capacity + mass-flow** — optional capacity input (kW or tons of
 A2. **Volumetric metrics** — volumetric cooling capacity (ρ₁·q_evap,
     kJ/m³) and displacement per kW; with A1, required displacement (m³/h).
 A3. **Carnot / second-law efficiency** — ideal Carnot COP from the
-    evaporator/condenser temperatures (dew/bubble means for blends) and
+    evaporator/condenser temperatures (`coilProfiles()` means for blends) and
     exergetic efficiency COP/COP_Carnot.
 A4. **Cycle sensitivity sweep** — vary evaporator or condensing T from X to
     Y in N steps; plot COP (and discharge T) vs the swept variable. Loops
@@ -107,7 +108,7 @@ A9. **Two-stage / cascade cycle builder** — intercooler pressure
     `cycle.js` rework. Last because it depends on A8-style multi-state
     rendering.
 
-Suggested order: B2 → A1–A3 (small, shared UI) → B3–B6 →
+Suggested order: A1–A3 (small, shared UI) → B3–B6 →
 A4–A6 → A7 → B7 → A8 → A9.
 
 ## Working notes for contributors

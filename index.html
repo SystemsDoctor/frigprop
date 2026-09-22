@@ -372,6 +372,27 @@
             <span class="result-key">Discharge temperature T<sub>2</sub></span>
             <span class="result-val" id="t-discharge">—</span>
           </div>
+
+          <!-- Zeotropic blends only: temperature glide across each coil -->
+          <div id="coil-glide" class="hidden">
+            <div class="section-divider" style="color:var(--warn)">Coil Temperatures — Glide</div>
+            <div class="result-row">
+              <span class="result-key">Evaporator: inlet → dew point</span>
+              <span class="result-val" id="coil-evap">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-key">Evaporating glide · mean T</span>
+              <span class="result-val" id="coil-evap-glide">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-key">Condenser: dew point → bubble point</span>
+              <span class="result-val" id="coil-cond">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-key">Condensing glide · mean T</span>
+              <span class="result-val" id="coil-cond-glide">—</span>
+            </div>
+          </div>
         </div>
 
         <!-- Side-by-side metrics when a comparison fluid is selected -->
@@ -454,6 +475,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260922a"></script>
+  <script type="module" src="./assets/js/app.js?v=20260922b"></script>
 </body>
 </html>

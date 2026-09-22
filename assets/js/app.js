@@ -2,8 +2,8 @@
  * app.js — Controller. Wires backend + cycle logic + UI together.
  * The property backend is swappable via this one import (same interface).
  */
-import backend from "./tables.js";
-import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath } from "./cycle.js";
+import backend from "./tables.js?v=20260922b";
+import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath, coilProfiles } from "./cycle.js?v=20260922b";
 import { getRefrigerantList, getRefrigerantInfo } from "./refrigerants.js";
 import {
   setStatus, populateRefrigerantSelector, onRefrigerantChange,
@@ -15,7 +15,7 @@ import {
   wireLookupControls, enableLookupButton, showLookupError,
   renderLookupState, renderLookupSat,
   refreshUnitLabels, refreshLookupFields, onUnitToggle,
-} from "./ui.js?v=20260922a";  // versioned: new exports must not meet a cached ui.js
+} from "./ui.js?v=20260922b";  // versioned: new exports must not meet a cached ui.js
 import {
   initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker,
 } from "./chart.js";
@@ -264,7 +264,8 @@ async function handleCalc() {
     const metrics = analyzeVCRC(states);
     const { warnings, notes } = validateCycle(states);
     const expPath = await expansionPath(backend, states[2], states[3]);
-    const primary = { key: currentFluidKey, states, metrics, warnings, notes, expPath };
+    const coils = await coilProfiles(backend, states, inputs);
+    const primary = { key: currentFluidKey, states, metrics, warnings, notes, expPath, coils };
 
     // Same cycle inputs on the comparison fluid (errors don't block the primary)
     let comparison = null;
@@ -276,6 +277,7 @@ async function handleCalc() {
         comparison = {
           key: compKey, states: cStates, metrics: analyzeVCRC(cStates),
           expPath: await expansionPath(backend, cStates[2], cStates[3]),
+          coils: await coilProfiles(backend, cStates, inputs),
         };
       } catch (err) {
         warnings.push(`Comparison fluid ${compKey}: ${err.message}.`);

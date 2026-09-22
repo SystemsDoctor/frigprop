@@ -20,7 +20,9 @@ no build step.
   temperatures, with optional superheat/subcooling (specified as ΔT from
   saturation or as a pressure) and compressor isentropic efficiency.
   Outputs state table, q_evap, q_cond, w_comp, COP for cooling and heating,
-  pressure ratio, and discharge temperature.
+  pressure ratio, and discharge temperature. For zeotropic blends it also
+  shows each coil's temperature glide: evaporator inlet → dew point,
+  condenser dew point → bubble point, and the mean temperatures.
 - **Advanced Tools** — a collapsed-by-default section below the diagram for
   options beyond the basic cycle. Any option that changes the cycle results
   or diagram flags them with an orange "Advanced: …" marker.
@@ -58,8 +60,10 @@ qualities, deep superheat/subcool, and near-critical interpolation.
 
 - This is a table-interpolation teaching/engineering tool, not a certified
   property reference. The truth source is CoolProp 7.2.0.
-- Zeotropic blends (R-407C, R-454B, R-452B, R-449A) use bubble/dew lines per side;
-  two-phase temperatures lerp across the glide.
+- Zeotropic blends (R-407C, R-454B, R-452B, R-449A) use bubble/dew lines per
+  side; two-phase temperatures follow a quadratic in quality through the
+  bubble, mid-glide (Q = 0.5) and dew points, held to the ±0.3 K gate against
+  CoolProp's equilibrium temperature (worst case ~0.12 K, R-449A).
 - The cycle model is subcritical only; transcritical operation (e.g. R-744
   above 31 °C) is detected and blocked with an explanation.
 - Compression is isentropic by default (η adjustable); dry fluids (R-600a,

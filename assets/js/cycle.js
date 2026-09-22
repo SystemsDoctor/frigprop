@@ -98,6 +98,39 @@ export async function expansionPath(backend, state3, state4, nPoints = 15) {
 }
 
 /**
+ * Glide-aware coil temperature profiles. The evaporator boils from the
+ * two-phase inlet (state 4) up to the dew point at P_evap; the condenser
+ * condenses from the dew point down to the bubble point at P_cond. For pure
+ * fluids and azeotropes the glides are ~0 and the mean equals T_sat.
+ * When the cycle was specified by temperature (not pressure) the evaporator
+ * dew and condenser bubble points are the inputs themselves, exactly.
+ * @param {object}   backend — property backend (tables.js), on this fluid
+ * @param {object[]} states  — [state1, state2, state3, state4]
+ * @param {object}   [inputs] — the computeVCRCStates inputs
+ * @returns {Promise<{evap: {P_kPa, T_in_C, T_dew_C, T_mean_C, glide_K},
+ *                    cond: {P_kPa, T_dew_C, T_bub_C, T_mean_C, glide_K}}>}
+ */
+export async function coilProfiles(backend, states, inputs = {}) {
+  const [s1, s2, , s4] = states;
+  const e = await backend.getSatProps("P", s1.P_kPa);
+  const c = await backend.getSatProps("P", s2.P_kPa);
+  const shByP = inputs.superheat && inputs.sh_by === "P";
+  const scByP = inputs.subcool && inputs.sc_by === "P";
+  const eDew = !shByP && Number.isFinite(inputs.T1_C) ? inputs.T1_C : e.T_dew_C;
+  const cBub = !scByP && Number.isFinite(inputs.T3_C) ? inputs.T3_C : c.T_bubble_C;
+  return {
+    evap: {
+      P_kPa: s1.P_kPa, T_in_C: s4.T_C, T_dew_C: eDew,
+      T_mean_C: (s4.T_C + eDew) / 2, glide_K: eDew - s4.T_C,
+    },
+    cond: {
+      P_kPa: s2.P_kPa, T_dew_C: c.T_dew_C, T_bub_C: cBub,
+      T_mean_C: (c.T_dew_C + cBub) / 2, glide_K: c.T_dew_C - cBub,
+    },
+  };
+}
+
+/**
  * Compute cycle performance from 4 state objects.
  * @param {object[]} states  — [state1, state2, state3, state4]
  */

@@ -604,6 +604,24 @@ function fmtX(x) {
   return `<span class="val-x-twophase">${fmt(x, 3)}</span>`;
 }
 
+// glide below this is reported as none (pure fluids, azeotropes)
+const GLIDE_MIN_K = 0.05;
+
+/** True when either coil of a cycle shows temperature glide. */
+function _hasGlide(coils) {
+  return !!coils && Math.max(Math.abs(coils.evap.glide_K), Math.abs(coils.cond.glide_K)) > GLIDE_MIN_K;
+}
+
+/** "a → b °C" and "g K · mean m °C" strings for one coil, in display units. */
+function _coilText(from_C, to_C, glide_K, mean_C) {
+  const L = units.label("T");
+  return {
+    span:  `${du(from_C, "T", 2)} → ${du(to_C, "T", 2)} <span class="unit">${L}</span>`,
+    glide: `${du(glide_K, "dT", 2)} <span class="unit">${units.label("dT")}</span> · ` +
+           `${du(mean_C, "T", 2)} <span class="unit">${L}</span>`,
+  };
+}
+
 // metric rows shared by the single and comparison performance views:
 // [label (HTML), metrics key, unit-kind|null, decimals]
 const METRIC_ROWS = [
@@ -681,6 +699,17 @@ export function renderResults(primary, comparison) {
     $("w-comp").innerHTML  = `${du(metrics.W_comp, "h", 2)} <span class="unit">${hUnit}</span>`;
     $("p-ratio").textContent = fmt(metrics.P_ratio, 2);
     $("t-discharge").innerHTML = `${du(metrics.T_discharge_C, "T", 1)} <span class="unit">${units.label("T")}</span>`;
+    const glide = _hasGlide(primary.coils);
+    $("coil-glide").classList.toggle("hidden", !glide);
+    if (glide) {
+      const { evap: e, cond: c } = primary.coils;
+      const ev = _coilText(e.T_in_C, e.T_dew_C, e.glide_K, e.T_mean_C);
+      const cd = _coilText(c.T_dew_C, c.T_bub_C, c.glide_K, c.T_mean_C);
+      $("coil-evap").innerHTML = ev.span;
+      $("coil-evap-glide").innerHTML = ev.glide;
+      $("coil-cond").innerHTML = cd.span;
+      $("coil-cond-glide").innerHTML = cd.glide;
+    }
   }
   $("perf-single").classList.toggle("hidden", !!comparison);
   $("perf-compare").classList.toggle("hidden", !comparison);
@@ -696,13 +725,24 @@ function _renderComparisonMetrics(primary, comparison) {
     const txt = kind ? `${du(v, kind, dec)} <span class="unit">${units.label(kind)}</span>` : fmt(v, dec);
     return `<td>${txt}</td>`;
   };
+  // coil glide rows when either fluid is zeotropic
+  const coilRow = (label, pick) => `
+          <tr><td style="text-align:left;color:var(--text-dim)">${label}</td>
+          ${[primary.coils, comparison.coils].map(k => `<td>${_hasGlide(k) ? pick(k)
+            : '<span class="unit">no glide</span>'}</td>`).join("")}</tr>`;
+  const glideRows = _hasGlide(primary.coils) || _hasGlide(comparison.coils)
+    ? coilRow("Evap. inlet → dew", k => _coilText(k.evap.T_in_C, k.evap.T_dew_C, k.evap.glide_K, k.evap.T_mean_C).span) +
+      coilRow("Evap. glide · mean", k => _coilText(k.evap.T_in_C, k.evap.T_dew_C, k.evap.glide_K, k.evap.T_mean_C).glide) +
+      coilRow("Cond. dew → bubble", k => _coilText(k.cond.T_dew_C, k.cond.T_bub_C, k.cond.glide_K, k.cond.T_mean_C).span) +
+      coilRow("Cond. glide · mean", k => _coilText(k.cond.T_dew_C, k.cond.T_bub_C, k.cond.glide_K, k.cond.T_mean_C).glide)
+    : "";
   box.innerHTML = `
     <table class="results-table" aria-label="Performance comparison">
       <thead><tr><th style="text-align:left">Metric</th><th>${primary.key}</th><th>${comparison.key}</th></tr></thead>
       <tbody>
         ${METRIC_ROWS.map(r => `
           <tr><td style="text-align:left;color:var(--text-dim)">${r[0]}</td>
-          ${cell(primary.metrics, r)}${cell(comparison.metrics, r)}</tr>`).join("")}
+          ${cell(primary.metrics, r)}${cell(comparison.metrics, r)}</tr>`).join("")}${glideRows}
       </tbody>
     </table>`;
 }
@@ -711,7 +751,7 @@ function _renderComparisonMetrics(primary, comparison) {
 export function buildResultsCSV(primary, comparison) {
   const L = k => units.label(k);
   const lines = [];
-  const block = ({ key, states, metrics }) => {
+  const block = ({ key, states, metrics, coils }) => {
     lines.push(`Fluid,${key}`);
     lines.push(`State,T (${L("T")}),P (${L("P")}),h (${L("h")}),s (${L("s")}),u (${L("u")}),x,rho (${L("rho")})`);
     states.forEach((s, i) => lines.push([
@@ -726,6 +766,15 @@ export function buildResultsCSV(primary, comparison) {
     lines.push(`W_comp (${L("h")}),${du(metrics.W_comp, "h", 2)}`);
     lines.push(`Pressure ratio,${fmt(metrics.P_ratio, 2)}`);
     lines.push(`Discharge T2 (${L("T")}),${du(metrics.T_discharge_C, "T", 1)}`);
+    if (_hasGlide(coils)) {
+      const { evap: e, cond: c } = coils;
+      lines.push(`Evaporator inlet T4 (${L("T")}),${du(e.T_in_C, "T", 2)}`);
+      lines.push(`Evaporator dew T (${L("T")}),${du(e.T_dew_C, "T", 2)}`);
+      lines.push(`Evaporating glide (${L("dT")}),${du(e.glide_K, "dT", 2)}`);
+      lines.push(`Condenser dew T (${L("T")}),${du(c.T_dew_C, "T", 2)}`);
+      lines.push(`Condenser bubble T (${L("T")}),${du(c.T_bub_C, "T", 2)}`);
+      lines.push(`Condensing glide (${L("dT")}),${du(c.glide_K, "dT", 2)}`);
+    }
   };
   block(primary);
   if (comparison) { lines.push(""); block(comparison); }

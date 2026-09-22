@@ -30,7 +30,7 @@ globalThis.fetch = async (url) => {
 };
 
 const backend = (await import(path.join(ROOT, 'assets/js/tables.js'))).default;
-const { computeVCRCStates, analyzeVCRC } = await import(path.join(ROOT, 'assets/js/cycle.js'));
+const { computeVCRCStates, analyzeVCRC, coilProfiles } = await import(path.join(ROOT, 'assets/js/cycle.js'));
 const truth = JSON.parse(await readFile(path.join(ROOT, 'tests/truth.json'), 'utf8'));
 
 let pass = 0;
@@ -85,6 +85,14 @@ for (const c of truth.cycles) {
     diff(errs, 'h3', states[2].h, w.h3, TOL.h);
     diff(errs, 'P1', states[0].P_kPa, w.P1_kPa, TOL.P_rel, true);
     diff(errs, 'P2', states[1].P_kPa, w.P2_kPa, TOL.P_rel, true);
+    // glide-aware coil temperatures (two-phase inlet T4, dew/bubble points)
+    if (w.T4 !== undefined) {
+      const coil = await coilProfiles(backend, states, inputs);
+      diff(errs, 'T4', coil.evap.T_in_C, w.T4, TOL.T);
+      diff(errs, 'Tdew_evap', coil.evap.T_dew_C, w.T_dew_evap, TOL.T);
+      diff(errs, 'Tdew_cond', coil.cond.T_dew_C, w.T_dew_cond, TOL.T);
+      diff(errs, 'Tbub_cond', coil.cond.T_bub_C, w.T_bub_cond, TOL.T);
+    }
     check(label, errs);
   } catch (e) {
     failures.push(`${label}: threw ${e.message}`);
