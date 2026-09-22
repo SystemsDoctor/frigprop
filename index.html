@@ -62,7 +62,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260616a">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260922a">
 </head>
 <body>
 
@@ -85,7 +85,7 @@
       <div class="about-body">
         <p>FrigProp is a free, browser-based refrigerant properties calculator and vapor-compression refrigeration cycle (VCRC) analysis tool. No installation required — all computation runs locally in your browser using precomputed thermodynamic property tables sourced from <a href="http://www.coolprop.org/" rel="noopener">CoolProp</a>.</p>
         <p><strong>Property lookup</strong> — specify any two independent properties (temperature &amp; pressure, pressure &amp; enthalpy, pressure &amp; entropy, temperature &amp; quality, or saturation state) and retrieve the full thermodynamic state: temperature, pressure, specific enthalpy, specific entropy, internal energy, specific volume, density, and vapor quality.</p>
-        <p><strong>Cycle analysis</strong> — set evaporator and condensing temperatures, optional superheat and subcooling, and isentropic efficiency to compute the coefficient of performance (COP) for cooling and heating modes, compressor work, evaporator and condenser heat transfer, pressure ratio, and compressor discharge temperature. Results include an interactive T-s or P-h diagram with the saturation dome and all four cycle state points. Two refrigerants can be analyzed side-by-side for direct comparison.</p>
+        <p><strong>Cycle analysis</strong> — set evaporator and condensing temperatures, optional superheat and subcooling, and isentropic efficiency to compute the coefficient of performance (COP) for cooling and heating modes, compressor work, evaporator and condenser heat transfer, pressure ratio, and compressor discharge temperature. Results include an interactive T-s or P-h diagram with the saturation dome and all four cycle state points. Under Advanced Tools, two refrigerants can be analyzed side-by-side for direct comparison.</p>
         <p><strong>Supported refrigerants (28):</strong>
           Modern low-GWP HFOs and blends — R-32, R-1234yf, R-1234ze(E), R-1233zd(E), R-454B, R-452B, R-449A, R-513A, R-152a;
           common HFCs — R-134a, R-410A, R-407C, R-404A, R-507A, R-23;
@@ -291,13 +291,6 @@
           </div>
         </div>
 
-        <div class="form-row" style="margin-top:6px">
-          <label for="compare-fluid">Compare With (optional)</label>
-          <select id="compare-fluid" class="lookup-select">
-            <option value="">— none —</option>
-          </select>
-        </div>
-
         <div id="range-hint" class="range-hint"></div>
 
         <button id="calc-btn" class="calc-btn" disabled>Calculate Cycle</button>
@@ -316,6 +309,7 @@
         <div class="panel-header panel-header-sub">
           <span class="panel-title">State Properties</span>
           <span id="states-fluid-label" class="chart-fluid-label"></span>
+          <span class="adv-marker hidden" data-adv-marker></span>
           <div class="chart-btns">
             <button id="export-csv-btn" class="chart-btn" title="Copy results as CSV to the clipboard">⧉ Copy CSV</button>
             <button id="share-link-btn" class="chart-btn" title="Copy a link that reproduces this cycle">🔗 Copy Link</button>
@@ -398,6 +392,7 @@
           <button id="chart-tab-ph" class="chart-tab" role="tab" aria-selected="false">P-h</button>
         </div>
         <span id="ts-fluid-label" class="chart-fluid-label"></span>
+        <span class="adv-marker hidden" data-adv-marker></span>
         <div class="chart-btns">
           <button id="ts-zoom-in-btn" class="chart-btn" title="Zoom in" aria-label="Zoom in">＋</button>
           <button id="ts-zoom-out-btn" class="chart-btn" title="Zoom out" aria-label="Zoom out">－</button>
@@ -410,6 +405,30 @@
         <canvas id="ts-chart" role="img" aria-label="Thermodynamic diagram with saturation dome and cycle overlay"></canvas>
       </div>
     </div>
+
+    <!-- Pane: Advanced Tools — collapsed by default. Options that change the
+         cycle apply to the results + diagram above and flag them with an
+         "Advanced: …" marker. -->
+    <details id="advanced-tools" class="pane adv-details">
+      <summary class="panel-header">
+        <span class="panel-title">Advanced Tools</span>
+        <span class="adv-marker hidden" data-adv-marker></span>
+      </summary>
+      <div class="adv-body">
+
+        <div class="adv-tool">
+          <div class="section-divider" style="color:var(--accent2)">Two-Fluid Comparison</div>
+          <p class="adv-note">Runs the same cycle inputs for a second refrigerant. Both appear in the results and on the diagram.</p>
+          <div class="form-row">
+            <label for="compare-fluid">Compare with</label>
+            <select id="compare-fluid" class="lookup-select">
+              <option value="">— none —</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+    </details>
 
     </div><!-- .col-right -->
     </div><!-- .app-columns -->
@@ -435,6 +454,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260616a"></script>
+  <script type="module" src="./assets/js/app.js?v=20260922a"></script>
 </body>
 </html>

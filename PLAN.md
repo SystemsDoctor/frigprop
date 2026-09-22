@@ -15,7 +15,12 @@ s ±0.002 kJ/kg·K, T ±0.3 K). v1.2 added isentropic efficiency,
 two-fluid comparison, cycle export/sharing, the true constant-h expansion
 curve, and an accessibility pass. v1.3 (in progress) adds R-449A as the
 28th fluid (R-404A/R-507A retrofit blend; composition, critical point and
-config documented in `scripts/generate_tables.py`).
+config documented in `scripts/generate_tables.py`) and the Advanced Tools
+section (collapsed `<details id="advanced-tools">` below the diagram,
+open state in `localStorage`) with the two-fluid comparison moved into it.
+Active advanced options flag the results, diagram and section headers via
+`setAdvancedMarkers()` in `ui.js` (labels built in `app.js
+_refreshAdvancedMarkers()` — add each new cycle-altering option there).
 
 ## Design principle — two tiers
 
@@ -74,13 +79,6 @@ B7. **PWA/offline support** — manifest + service worker caching the static
 
 ## Advanced operations (Advanced Tools section, closed by default)
 
-A0. **Advanced Tools scaffold** — prerequisite for everything below.
-    Collapsed `<details>` under the cycle pane, rotating arrow, sub-panels
-    per tool. **Relocate the existing two-fluid comparison** (the
-    `compare-fluid` selector) into it so the face shows one cycle.
-    Isentropic efficiency stays on the face (core cycle input); CSV/link
-    export stays on the face. Share links must still restore a comparison
-    and open the section when one is present.
 A1. **Capacity + mass-flow** — optional capacity input (kW or tons of
     refrigeration) → mass flow (kg/s), compressor power (kW), condenser
     rejection (kW). Arithmetic on existing metrics.
@@ -106,10 +104,10 @@ A8. **Transcritical R-744 gas-cooler cycle** — gas-cooler pressure +
     operation stays detected and blocked on the face.
 A9. **Two-stage / cascade cycle builder** — intercooler pressure
     optimization, cascade pairs (R-744/R-717, R-23/R-134a); larger
-    `cycle.js` rework. Last because it depends on A0 plumbing and A8-style
-    multi-state rendering.
+    `cycle.js` rework. Last because it depends on A8-style multi-state
+    rendering.
 
-Suggested order: A0 → B2 → A1–A3 (small, shared UI) → B3–B6 →
+Suggested order: B2 → A1–A3 (small, shared UI) → B3–B6 →
 A4–A6 → A7 → B7 → A8 → A9.
 
 ## Working notes for contributors

@@ -11,10 +11,11 @@ import {
   enableCalcButton, onCalcClick, showError, clearError,
   renderResults, buildResultsCSV, showTranscritWarning, highlightRefCard,
   populateComparisonSelect, getComparisonFluid, onComparisonChange,
+  wireAdvancedSection, openAdvancedSection, setAdvancedMarkers,
   wireLookupControls, enableLookupButton, showLookupError,
   renderLookupState, renderLookupSat,
   refreshUnitLabels, refreshLookupFields, onUnitToggle,
-} from "./ui.js";
+} from "./ui.js?v=20260922a";  // versioned: new exports must not meet a cached ui.js
 import {
   initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker,
 } from "./chart.js";
@@ -33,6 +34,7 @@ async function init() {
   if (params.get("u") === "IP") units.setSystem("IP");
 
   wireInputControls();
+  wireAdvancedSection();
   wireLookupControls(handleLookup);  // calls refreshLookupFields() internally
   onUnitToggle(handleUnitToggle);
   initCharts();
@@ -139,6 +141,9 @@ async function handleComparisonChange() {
   // comparison cycle (if any) no longer matches the selection — keep primary only
   if (last) last.comparison = null;
   await _updateDiagram();
+  // the control sits below the results: re-run a calculated cycle so the
+  // results + diagram reflect the new selection without another click
+  if (lastInputs) await handleCalc();
 }
 
 /** Chart bundle for one fluid; states/expPath may be null (dome only). */
@@ -162,6 +167,18 @@ async function _updateDiagram() {
     fluidLabel.textContent = compare ? `${name} vs ${compKey}` : name;
   }
   if (primary.satRows) updateCharts(primary, compare);
+  _refreshAdvancedMarkers();
+}
+
+/** Flag the results + diagram with every active advanced option. */
+function _refreshAdvancedMarkers() {
+  const labels = [];
+  const compKey = getComparisonFluid(currentFluidKey);
+  if (compKey) {
+    const sel = document.getElementById("compare-fluid");
+    labels.push(`vs ${sel.options[sel.selectedIndex].textContent}`);
+  }
+  setAdvancedMarkers(labels);
 }
 
 async function handleCalc() {
@@ -378,6 +395,7 @@ async function _applyShareParams(p) {
   const compKey = p.get("c");
   if (compKey && backend.getFluidMeta(compKey)) {
     document.getElementById("compare-fluid").value = compKey;
+    openAdvancedSection();
     await handleComparisonChange();
   }
   const te = parseFloat(p.get("te"));

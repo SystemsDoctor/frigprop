@@ -365,6 +365,39 @@ export function onComparisonChange(handler) {
   $("compare-fluid").addEventListener("change", () => handler($("compare-fluid").value || null));
 }
 
+// ---------------------------------------------------------------------------
+// Advanced Tools section
+// ---------------------------------------------------------------------------
+
+const ADV_OPEN_KEY = "frigprop.advancedOpen";
+
+/** Restore the Advanced Tools open/closed state (closed unless remembered open). */
+export function wireAdvancedSection() {
+  const det = $("advanced-tools");
+  try { det.open = localStorage.getItem(ADV_OPEN_KEY) === "1"; } catch (_) {}
+  det.addEventListener("toggle", () => {
+    try { localStorage.setItem(ADV_OPEN_KEY, det.open ? "1" : "0"); } catch (_) {}
+  });
+}
+
+/** Open the Advanced Tools section (e.g. when a shared link uses one of its options). */
+export function openAdvancedSection() {
+  $("advanced-tools").open = true;
+}
+
+/**
+ * Flag the results, diagram and Advanced Tools headers with the advanced
+ * options currently affecting the cycle; an empty list hides the flags.
+ * @param {string[]} labels  e.g. ["vs R-134a"]
+ */
+export function setAdvancedMarkers(labels) {
+  const text = labels.length ? `Advanced: ${labels.join(" · ")}` : "";
+  document.querySelectorAll("[data-adv-marker]").forEach(el => {
+    el.textContent = text;
+    el.classList.toggle("hidden", !text);
+  });
+}
+
 /** Show the selected fluid's valid temperature range under the inputs. */
 export function setRangeHint(meta) {
   const el = $("range-hint");

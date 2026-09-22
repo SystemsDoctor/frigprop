@@ -21,8 +21,12 @@ no build step.
   saturation or as a pressure) and compressor isentropic efficiency.
   Outputs state table, q_evap, q_cond, w_comp, COP for cooling and heating,
   pressure ratio, and discharge temperature.
-- **Side-by-side comparison** — run the same cycle on a second refrigerant:
-  overlaid saturation domes and cycles in distinct colors, metrics table.
+- **Advanced Tools** — a collapsed-by-default section below the diagram for
+  options beyond the basic cycle. Any option that changes the cycle results
+  or diagram flags them with an orange "Advanced: …" marker.
+  - **Side-by-side comparison** — run the same cycle on a second
+    refrigerant: overlaid saturation domes and cycles in distinct colors,
+    metrics table.
 - **T-s and P-h diagrams** — saturation dome, cycle overlay with the true
   constant-h expansion curve, lookup-state marker; pan/zoom with recenter,
   PNG download.
