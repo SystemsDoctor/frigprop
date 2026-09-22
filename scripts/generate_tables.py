@@ -32,6 +32,14 @@ FLUIDS = {
         "T_min_C": -60, "T_max_C": 50, "P_max_kPa": 3000,
         "T_crit_C": 71.8, "P_crit_kPa": 4671.0,
     },
+    # R449A (R-404A/R-507A retrofit): 24.3/24.7/25.3/25.7 wt% R32/R125/R1234yf/R134a
+    # as mole fractions; critical point from CoolProp all_critical_points()
+    # (the physical root — the second, sub-−160 °C root is spurious).
+    "R449A":   {
+        "cp_name":    "R32[0.4074]&R125[0.1795]&R1234yf[0.1935]&R134a[0.2197]",
+        "T_min_C": -60, "T_max_C": 60, "P_max_kPa": 3000,
+        "T_crit_C": 82.14, "P_crit_kPa": 4502.6,
+    },
 
     # Legacy HFCs / HCFC
     "R134a":   {"cp_name": "R134a",        "T_min_C": -50, "T_max_C": 100, "P_max_kPa": 5000},

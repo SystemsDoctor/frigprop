@@ -8,7 +8,7 @@ no build step.
 
 ## Features
 
-- **Refrigerant gallery** — 27 modern and legacy refrigerants, clustered by
+- **Refrigerant gallery** — 28 modern and legacy refrigerants, clustered by
   family (natural → HFO → HFC → HCFC → CFC), with safety class, GWP (AR4/AR5),
   ODP, regulatory status, typical applications, and replacement lineage.
   Keyboard navigable (arrow keys + Enter).
@@ -29,10 +29,10 @@ no build step.
 - **Export & sharing** — copy results as CSV, copy a URL that reproduces the
   configured cycle (fluid, comparison, inputs, units, diagram).
 
-## Refrigerants (27)
+## Refrigerants (28)
 
 - **Modern / low-GWP:** R-32, R-1234yf, R-1234ze(E), R-1233zd(E), R-454B,
-  R-452B, R-513A, R-152a
+  R-452B, R-449A, R-513A, R-152a
 - **Legacy HFC / HCFC / CFC:** R-134a, R-410A, R-407C, R-404A, R-507A, R-23,
   R-22, R-123, R-12, R-11
 - **Natural & other-purpose fluids:** R-744 (CO₂), R-717 (ammonia),
@@ -54,7 +54,7 @@ qualities, deep superheat/subcool, and near-critical interpolation.
 
 - This is a table-interpolation teaching/engineering tool, not a certified
   property reference. The truth source is CoolProp 7.2.0.
-- Zeotropic blends (R-407C, R-454B, R-452B) use bubble/dew lines per side;
+- Zeotropic blends (R-407C, R-454B, R-452B, R-449A) use bubble/dew lines per side;
   two-phase temperatures lerp across the glide.
 - The cycle model is subcritical only; transcritical operation (e.g. R-744
   above 31 °C) is detected and blocked with an explanation.

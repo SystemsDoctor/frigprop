@@ -141,6 +141,41 @@
   "replaced_by": [],
   "reference_state": "Mixture model (IIR components) — h_f ≈ 205.7 kJ/kg, s_f ≈ 1.087 kJ/kg·K at 0 °C"
  },
+ "R449A": {
+  "ashrae_designation": "R-449A",
+  "chemical_name": "R-32/R-125/R-1234yf/R-134a blend (Opteon™ XP40)",
+  "formula": "R-32/R-125/R-1234yf/R-134a (24.3/24.7/25.3/25.7 wt%)",
+  "molecular_weight": 87.2,
+  "safety_class": "A1",
+  "GWP_AR4": 1397,
+  "GWP_AR5": 1282,
+  "ODP": 0.0,
+  "normal_boiling_point_C": -45.7,
+  "T_crit_C": 82.14,
+  "P_crit_kPa": 4502.6,
+  "T_glide_C": 5.8,
+  "blend_components": [
+   "R-32",
+   "R-125",
+   "R-1234yf",
+   "R-134a"
+  ],
+  "refrigerant_type": "HFO/HFC blend",
+  "regulatory_status": "EPA SNAP acceptable; F-Gas compliant for retrofits and systems where GWP < 2500 applies; principal lower-GWP A1 retrofit for R-404A/R-507A",
+  "typical_applications": [
+   "supermarket refrigeration",
+   "cold storage",
+   "commercial refrigeration",
+   "transport refrigeration"
+  ],
+  "replaces": [
+   "R-404A",
+   "R-507A",
+   "R-22"
+  ],
+  "replaced_by": [],
+  "reference_state": "Mixture model (IIR components) — h_f ≈ 203.7 kJ/kg, s_f ≈ 1.133 kJ/kg·K at 0 °C"
+ },
  "R134a": {
   "ashrae_designation": "R-134a",
   "chemical_name": "1,1,1,2-Tetrafluoroethane",

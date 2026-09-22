@@ -17,8 +17,8 @@ and bump the version everywhere when the schema changes.
   }
 }
 ```
-27 fluids: R32, R1234yf, R1234ze, R454B, R452B, R134a, R410A, R407C, R404A,
-R22, R290, R600a, R744, R717, R170, R1270, R600, R718, RE170, R1233zd,
+28 fluids: R32, R1234yf, R1234ze, R454B, R452B, R449A, R134a, R410A, R407C,
+R404A, R22, R290, R600a, R744, R717, R170, R1270, R600, R718, RE170, R1233zd,
 R513A, R152a, R507A, R23, R123, R12, R11.
 Keys match `data/refrigerants.json` exactly.
 
