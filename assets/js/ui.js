@@ -352,7 +352,32 @@ export function getInputs() {
     dT_sc_K:  units.fromInput(parseFloat($("dT-sc").value), "dT"),
     P_cond_kPa: units.fromInput(parseFloat($("P-cond").value), "P"),
     eta_isen: isNaN(etaPct) ? 1 : etaPct / 100,
+    // Advanced Tools: internal heat exchanger (0 = none; NaN = invalid entry)
+    ihx_eff:  $("ihx-on").checked ? parseFloat($("ihx-eff").value) / 100 : 0,
   };
+}
+
+export function onIhxChange(handler) {
+  $("ihx-on").addEventListener("change", handler);
+  $("ihx-eff").addEventListener("change", handler);
+}
+
+/**
+ * Cycle states in flow order with display labels: 1, (1′), 2, 3, (3′), 4 —
+ * the primed states exist only with an internal heat exchanger.
+ * @returns {{label: string, st: object, derived: boolean, ihx: boolean, vapor: boolean}[]}
+ */
+function _statePoints(states) {
+  const [s1, s2, s3, s4] = states;
+  const x = states.ihx;
+  return [
+    { label: "1", st: s1, derived: false, ihx: false, vapor: true },
+    ...(x ? [{ label: "1′", st: x.suction, derived: true, ihx: true, vapor: true }] : []),
+    { label: "2", st: s2, derived: true, ihx: false, vapor: true },
+    { label: "3", st: s3, derived: false, ihx: false, vapor: false },
+    ...(x ? [{ label: "3′", st: x.liquid, derived: true, ihx: true, vapor: false }] : []),
+    { label: "4", st: s4, derived: true, ihx: false, vapor: false },
+  ];
 }
 
 /** Restore cycle inputs (SI values, e.g. from a share URL). Inverse of getInputs. */
@@ -367,6 +392,8 @@ export function applyInputs(inp) {
   set("dT-sc", inp.dT_sc_K, "dT");
   set("P-cond", inp.P_cond_kPa, "P");
   if (inp.eta_isen !== undefined && inp.eta_isen < 1) $("eta-isen").value = Math.round(inp.eta_isen * 100);
+  $("ihx-on").checked = inp.ihx_eff > 0;
+  if (inp.ihx_eff > 0) $("ihx-eff").value = Math.round(inp.ihx_eff * 100);
   for (const [name, v] of [["sh-by", inp.sh_by], ["sc-by", inp.sc_by]]) {
     const radio = document.querySelector(`input[name="${name}"][value="${v}"]`);
     if (radio) radio.checked = true;
@@ -765,6 +792,7 @@ function _historyLabel(e) {
   if (i.superheat) parts.push(i.sh_by === "P" ? `SH @ ${du(i.P_evap_kPa, "P", 0)} ${units.label("P")}` : `SH ${du(i.dT_sh_K, "dT", 1)} ${units.label("dT")}`);
   if (i.subcool) parts.push(i.sc_by === "P" ? `SC @ ${du(i.P_cond_kPa, "P", 0)} ${units.label("P")}` : `SC ${du(i.dT_sc_K, "dT", 1)} ${units.label("dT")}`);
   if (i.eta_isen < 1) parts.push(`η ${Math.round(i.eta_isen * 100)} %`);
+  if (i.ihx_eff > 0) parts.push(`IHX ε ${Math.round(i.ihx_eff * 100)} %`);
   return parts.join(" · ");
 }
 
@@ -1089,17 +1117,14 @@ export function renderResults(primary, comparison) {
 
   const tbody = $("results-tbody");
   tbody.innerHTML = "";
-  states.forEach((s, i) => {
-    const phaseClass = s.x === null
-      ? (i === 0 || i === 1 ? "val-vapor" : "val-liquid")
-      : "";
-    const isDerived  = i === 1 || i === 3;
-    const badgeClass = isDerived
-      ? "state-badge state-badge-derived"
-      : "state-badge";
+  _statePoints(states).forEach(({ label, st: s, derived, ihx, vapor }) => {
+    const phaseClass = s.x === null ? (vapor ? "val-vapor" : "val-liquid") : "";
+    const badgeClass = ihx ? "state-badge state-badge-ihx"
+      : derived ? "state-badge state-badge-derived" : "state-badge";
     const tr = document.createElement("tr");
+    if (ihx) tr.title = "Internal heat exchanger state (Advanced Tools)";
     tr.innerHTML = `
-      <td><span class="${badgeClass}">${i + 1}</span></td>
+      <td><span class="${badgeClass}">${label}</span></td>
       <td class="${phaseClass}">${du(s.T_C, "T", 2)}</td>
       <td>${du(s.P_kPa, "P", 2)}</td>
       <td>${du(s.h, "h", 2)}</td>
@@ -1122,6 +1147,8 @@ export function renderResults(primary, comparison) {
     $("w-comp").innerHTML  = `${du(metrics.W_comp, "h", 2)} <span class="unit">${hUnit}</span>`;
     $("p-ratio").textContent = fmt(metrics.P_ratio, 2);
     $("t-discharge").innerHTML = `${du(metrics.T_discharge_C, "T", 1)} <span class="unit">${units.label("T")}</span>`;
+    $("q-ihx-row").classList.toggle("hidden", !states.ihx);
+    if (states.ihx) $("q-ihx").innerHTML = `${du(states.ihx.Q, "h", 2)} <span class="unit">${hUnit}</span>`;
     const glide = _hasGlide(primary.coils);
     $("coil-glide").classList.toggle("hidden", !glide);
     if (glide) {
@@ -1159,13 +1186,18 @@ function _renderComparisonMetrics(primary, comparison) {
       coilRow("Cond. dew → bubble", k => _coilText(k.cond.T_dew_C, k.cond.T_bub_C, k.cond.glide_K, k.cond.T_mean_C).span) +
       coilRow("Cond. glide · mean", k => _coilText(k.cond.T_dew_C, k.cond.T_bub_C, k.cond.glide_K, k.cond.T_mean_C).glide)
     : "";
+  const ihxCell = b => b.states.ihx
+    ? `${du(b.states.ihx.Q, "h", 2)} <span class="unit">${units.label("h")}</span>` : "—";
+  const ihxRow = primary.states.ihx || comparison.states.ihx
+    ? `<tr><td style="text-align:left;color:var(--text-dim)">Q<sub>IHX</sub></td><td>${ihxCell(primary)}</td><td>${ihxCell(comparison)}</td></tr>`
+    : "";
   box.innerHTML = `
     <table class="results-table" aria-label="Performance comparison">
       <thead><tr><th style="text-align:left">Metric</th><th>${primary.key}</th><th>${comparison.key}</th></tr></thead>
       <tbody>
         ${METRIC_ROWS.map(r => `
           <tr><td style="text-align:left;color:var(--text-dim)">${r[0]}</td>
-          ${cell(primary.metrics, r)}${cell(comparison.metrics, r)}</tr>`).join("")}${glideRows}
+          ${cell(primary.metrics, r)}${cell(comparison.metrics, r)}</tr>`).join("")}${ihxRow}${glideRows}
       </tbody>
     </table>`;
 }
@@ -1209,8 +1241,8 @@ export function buildResultsCSV(primary, comparison) {
   const block = ({ key, states, metrics, coils, adv }) => {
     lines.push(`Fluid,${key}`);
     lines.push(`State,T (${L("T")}),P (${L("P")}),h (${L("h")}),s (${L("s")}),u (${L("u")}),x,rho (${L("rho")})`);
-    states.forEach((s, i) => lines.push([
-      i + 1, du(s.T_C, "T", 2), du(s.P_kPa, "P", 2), du(s.h, "h", 2),
+    _statePoints(states).forEach(({ label, st: s }) => lines.push([
+      label, du(s.T_C, "T", 2), du(s.P_kPa, "P", 2), du(s.h, "h", 2),
       du(s.s, "s", 4), du(s.u, "u", 2), s.x === null ? "" : fmt(s.x, 4),
       du(s.rho, "rho", 3),
     ].join(",")));
@@ -1221,6 +1253,10 @@ export function buildResultsCSV(primary, comparison) {
     lines.push(`W_comp (${L("h")}),${du(metrics.W_comp, "h", 2)}`);
     lines.push(`Pressure ratio,${fmt(metrics.P_ratio, 2)}`);
     lines.push(`Discharge T2 (${L("T")}),${du(metrics.T_discharge_C, "T", 1)}`);
+    if (states.ihx) {
+      lines.push(`IHX effectiveness (%),${Math.round(states.ihx.eff * 100)}`);
+      lines.push(`Q_IHX (${L("h")}),${du(states.ihx.Q, "h", 2)}`);
+    }
     if (_hasGlide(coils)) {
       const { evap: e, cond: c } = coils;
       lines.push(`Evaporator inlet T4 (${L("T")}),${du(e.T_in_C, "T", 2)}`);

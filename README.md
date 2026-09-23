@@ -28,6 +28,9 @@ no build step.
 - **Advanced Tools** — a collapsed-by-default section below the diagram for
   options beyond the basic cycle. Any option that changes the cycle results
   or diagram flags them with an orange "Advanced: …" marker.
+  - **Internal heat exchanger** — suction-line IHX with effectiveness ε:
+    the main cycle gains states 1′ (compressor inlet) and 3′ (valve inlet),
+    Q_IHX is reported, and results/diagram carry "Advanced: IHX ε …".
   - **Side-by-side comparison** — run the same cycle on a second
     refrigerant: overlaid saturation domes and cycles in distinct colors,
     metrics table.

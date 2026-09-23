@@ -62,7 +62,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260923d">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260923e">
 </head>
 <body>
 
@@ -371,6 +371,10 @@
             <span class="result-key">Q<sub>cond</sub></span>
             <span class="result-val result-ok" id="q-cond">—</span>
           </div>
+          <div class="result-row hidden" id="q-ihx-row">
+            <span class="result-key">Q<sub>IHX</sub> — internal heat exchanger</span>
+            <span class="result-val" id="q-ihx">—</span>
+          </div>
 
           <div class="section-divider" style="color:var(--accent2)">Work &amp; Compression</div>
           <div class="result-row">
@@ -459,6 +463,22 @@
             <select id="compare-fluid" class="lookup-select">
               <option value="">— none —</option>
             </select>
+          </div>
+        </div>
+
+        <div class="adv-tool">
+          <div class="section-divider" style="color:var(--accent2)">Internal Heat Exchanger</div>
+          <p class="adv-note">Suction-line heat exchanger: condenser liquid (3 → 3′) warms the evaporator vapor (1 → 1′). Effectiveness ε is relative to the side that runs out first. This changes the main cycle — its results and diagram are marked “Advanced: IHX”.</p>
+          <label class="mod-checkbox">
+            <input type="checkbox" id="ihx-on">
+            <span>Enable IHX</span>
+          </label>
+          <div class="form-row">
+            <label for="ihx-eff">Effectiveness ε</label>
+            <div class="input-group">
+              <input type="number" id="ihx-eff" step="1" min="1" max="100" value="50">
+              <span class="input-unit">%</span>
+            </div>
           </div>
         </div>
 
@@ -577,6 +597,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260923e"></script>
+  <script type="module" src="./assets/js/app.js?v=20260923f"></script>
 </body>
 </html>

@@ -2,10 +2,13 @@
  * cycle.js — Stateless VCRC analysis. No DOM access.
  *
  * VCRC state conventions:
- *   State 1 — compressor inlet (sat. vapor or superheated)
+ *   State 1 — evaporator exit = compressor inlet (sat. vapor or superheated)
  *   State 2 — compressor exit (isentropic: P_cond, s=s1)
  *   State 3 — condenser exit (sat. liquid or subcooled)
  *   State 4 — expansion exit (isenthalpic: P_evap, h=h3)
+ * With an internal heat exchanger (Advanced Tools) two states are added:
+ *   1′ — compressor inlet after the IHX (compression starts here)
+ *   3′ — expansion-valve inlet after the IHX (expansion starts here)
  */
 
 /**
@@ -17,8 +20,12 @@
  * @param {object} inputs   — { T1_C, T3_C,
  *                              superheat: bool, sh_by: "dT"|"P", dT_sh_K, P_evap_kPa,
  *                              subcool: bool,  sc_by: "dT"|"P", dT_sc_K, P_cond_kPa,
- *                              eta_isen: 0–1 (default 1, isentropic) }
- * @returns {Promise<object[]>} Array of 4 state objects
+ *                              eta_isen: 0–1 (default 1, isentropic),
+ *                              ihx_eff: 0–1 (optional internal heat exchanger) }
+ * @returns {Promise<object[]>} Array of 4 state objects: evaporator exit (1),
+ *   compressor exit (2), condenser exit (3), expansion exit (4). With an
+ *   internal heat exchanger the array also carries `ihx` = { suction (1′,
+ *   compressor inlet), liquid (3′, expansion-valve inlet), Q (kJ/kg), eff }.
  */
 export async function computeVCRCStates(backend, inputs) {
   const { T1_C, T3_C, superheat: shInlet, dT_sh_K, subcool: scExit, dT_sc_K } = inputs;
@@ -64,17 +71,41 @@ export async function computeVCRCStates(backend, inputs) {
       : satLiq;
   }
 
+  // Internal (suction-line) heat exchanger: liquid 3 → 3′ heats vapor 1 → 1′
+  // by Q = ε·Q_max, Q_max being the side that runs out first — vapor heated
+  // to T3 or liquid cooled to T1. The liquid side is only resolvable within
+  // the subcool grid (40 K); beyond it the vapor side (lower cp) limits.
+  const eff = inputs.ihx_eff > 0 ? Math.min(inputs.ihx_eff, 1) : 0;
+  let suction = state1, liquid = state3, ihx = null;
+  if (eff > 0) {
+    let qMax = (await backend.getProps("TP", state3.T_C, P_evap)).h - state1.h;
+    try {
+      qMax = Math.min(qMax, state3.h - (await backend.getProps("TP", state1.T_C, P_cond)).h);
+    } catch (_) { /* liquid side beyond the subcool grid — vapor side limits */ }
+    const Q = eff * qMax;
+    suction = await backend.getProps("PH", P_evap, state1.h + Q);
+    try {
+      liquid = await backend.getProps("PH", P_cond, state3.h - Q);
+    } catch (err) {
+      throw new Error(`IHX at ε = ${Math.round(eff * 100)} % subcools the liquid beyond the table coverage ` +
+                      `(${err.message}) — lower the effectiveness`);
+    }
+    ihx = { suction, liquid, Q, eff };
+  }
+
   // State 2 — compression to P_cond: isentropic, then η-corrected via h
-  let state2 = await backend.getProps("PS", P_cond, state1.s);
+  let state2 = await backend.getProps("PS", P_cond, suction.s);
   if (eta < 1) {
-    const h2 = state1.h + (state2.h - state1.h) / eta;
+    const h2 = suction.h + (state2.h - suction.h) / eta;
     state2 = await backend.getProps("PH", P_cond, h2);
   }
 
   // State 4 — isenthalpic expansion to P_evap
-  const state4 = await backend.getProps("PH", P_evap, state3.h);
+  const state4 = await backend.getProps("PH", P_evap, liquid.h);
 
-  return [state1, state2, state3, state4];
+  const states = [state1, state2, state3, state4];
+  if (ihx) states.ihx = ihx;
+  return states;
 }
 
 /**
@@ -145,7 +176,7 @@ export async function coilProfiles(backend, states, inputs = {}) {
  * @param {number|null} [capacity_kW]
  */
 export function advancedMetrics(states, metrics, coils, capacity_kW = null) {
-  const rho1 = states[0].rho;
+  const rho1 = (states.ihx ? states.ihx.suction : states[0]).rho;  // compressor suction
   const q_vol = rho1 * metrics.Q_evap;
   const T_L = coils.evap.T_mean_C + 273.15;
   const T_H = coils.cond.T_mean_C + 273.15;
@@ -364,7 +395,8 @@ export async function lookupFromTS(backend, T_C, s, range) {
  */
 export function analyzeVCRC(states) {
   const [s1, s2, s3, s4] = states;
-  const W_comp = s2.h - s1.h;
+  // with an IHX the compressor starts at 1′; the evaporator duty stays h1 − h4
+  const W_comp = s2.h - (states.ihx ? states.ihx.suction.h : s1.h);
   const Q_evap = s1.h - s4.h;
   const Q_cond = s2.h - s3.h;
   const COP_c = Q_evap / W_comp;
@@ -383,10 +415,12 @@ export function validateCycle(states) {
   const [s1, s2, s3, s4] = states;
   const warnings = [];
   const notes = [];
+  const suction = states.ihx ? states.ihx.suction : s1;
+  const valveIn = states.ihx ? states.ihx.liquid : s3;
 
-  if (s2.h <= s1.h) warnings.push("Compressor work is zero or negative (h2 ≤ h1).");
+  if (s2.h <= suction.h) warnings.push("Compressor work is zero or negative (h2 ≤ h1).");
   if (s3.h >= s2.h) warnings.push("Condenser shows no heat rejection (h3 ≥ h2).");
-  if (Math.abs(s4.h - s3.h) > 0.1) warnings.push(`Expansion process is not isenthalpic (|h4−h3| = ${Math.abs(s4.h - s3.h).toFixed(3)} kJ/kg).`);
+  if (Math.abs(s4.h - valveIn.h) > 0.1) warnings.push(`Expansion process is not isenthalpic (|h4−h3| = ${Math.abs(s4.h - valveIn.h).toFixed(3)} kJ/kg).`);
   if (s2.P_kPa <= s1.P_kPa) warnings.push("Condensing pressure is not higher than evaporating pressure.");
   if (s4.x !== null && (s4.x < 0 || s4.x > 1)) warnings.push(`Post-expansion quality out of range: x4 = ${s4.x !== null ? s4.x.toFixed(3) : 'N/A'}.`);
 

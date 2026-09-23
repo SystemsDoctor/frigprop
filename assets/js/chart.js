@@ -372,7 +372,7 @@ function _calcBounds(fluids) {
   };
   for (const f of fluids) {
     for (const r of f.satRows) { eat(r[cf], r[cy]); eat(r[cg], r[cy]); }
-    if (f.states) for (const s of f.states) { const p = MODES[_mode].pt(s); eat(p.x, p.y); }
+    if (f.states) for (const { st } of _statePoints(f.states)) { const p = MODES[_mode].pt(st); eat(p.x, p.y); }
   }
   const xPad = (xMax - xMin) * 0.07;
   if (_isLogY()) {
@@ -402,15 +402,30 @@ function _buildDomeDatasets(fluid, pal) {
   ];
 }
 
+/** States in flow order with labels: 1, (1′), 2, 3, (3′), 4 — primed ones only with an IHX. */
+function _statePoints(states) {
+  const [s1, s2, s3, s4] = states;
+  const x = states.ihx;
+  return [
+    { label: '1', st: s1 }, ...(x ? [{ label: '1′', st: x.suction }] : []),
+    { label: '2', st: s2 },
+    { label: '3', st: s3 }, ...(x ? [{ label: '3′', st: x.liquid }] : []),
+    { label: '4', st: s4 },
+  ];
+}
+
 function _buildCycleDatasets(fluid, pal) {
   const { states, satRows, expPath } = fluid;
   const [s1, s2, s3, s4] = states;
   const pt = MODES[_mode].pt;
+  // internal heat exchanger: compression starts at 1′, expansion at 3′
+  const s1c = states.ihx ? states.ihx.suction : null;
+  const s3v = states.ihx ? states.ihx.liquid : s3;
 
   let cyclePath;
   if (_mode === 'ts') {
-    // 1→2: compression — vertical at s1 for ideal, slanted when η < 1
-    const path12 = [pt(s1), pt(s2)];
+    // (1→1′ IHX heating) 1→2: compression — vertical for ideal, slanted when η < 1
+    const path12 = s1c ? [pt(s1), pt(s1c), pt(s2)] : [pt(s1), pt(s2)];
 
     // 2→3: desuperheat → horizontal condensation at Tsat(P_cond) → optional subcool
     const shelf = _satShelfAtP(satRows, s2.P_kPa);
@@ -424,11 +439,12 @@ function _buildCycleDatasets(fluid, pal) {
     } else {
       path23 = [pt(s2), pt(s3)];
     }
+    if (s1c) path23.push(pt(s3v));  // 3→3′: IHX liquid cooling
 
     // 3→4: isenthalpic expansion — true constant-h contour when provided
     const path34 = (expPath && expPath.length > 2)
       ? expPath.map(p => ({ x: p.s, y: p.T_C }))
-      : [pt(s3), pt(s4)];
+      : [pt(s3v), pt(s4)];
 
     // 4→1: horizontal evaporation at Tsat(P_evap) → optional superheat rise
     const shelfE = _satShelfAtP(satRows, s4.P_kPa);
@@ -440,7 +456,7 @@ function _buildCycleDatasets(fluid, pal) {
     cyclePath = [...path12, ...path23.slice(1), ...path34.slice(1), ...path41.slice(1)];
   } else {
     // P-h: condenser/evaporator are exact horizontals, expansion exact vertical
-    cyclePath = [pt(s1), pt(s2), pt(s3), pt(s4), pt(s1)];
+    cyclePath = [..._statePoints(states).map(p => pt(p.st)), pt(s1)];
   }
 
   return [
@@ -454,7 +470,7 @@ function _buildCycleDatasets(fluid, pal) {
     // State point dots
     {
       label: `${fluid.label} states`, isStates: true, fluidLabel: fluid.label,
-      data:  states.map((s, i) => ({ ...pt(s), stateNum: i + 1 })),
+      data:  _statePoints(states).map(p => ({ ...pt(p.st), stateNum: p.label })),
       showLine: false,
       pointRadius: 5, pointHoverRadius: 7,
       pointBackgroundColor: pal.cycle,

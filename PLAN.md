@@ -40,7 +40,10 @@ zeotropes). Advanced Tools also hosts a sensitivity sweep (`sweepCycle()`,
 inline-SVG charts in `ui.js` with series colors `--series-1/2` validated for
 the dark surface), a superheated vapor table (`superheatTable()`) and a
 recent/pinned cycle list (sessionStorage / localStorage, stored as share
-params and recalled through the share-link path).
+params and recalled through the share-link path). The internal heat
+exchanger (A7) is the first option that alters the main cycle: states 1′/3′
+ride on the state array as `states.ihx`, Q = ε·min(vapor-side, liquid-side)
+enthalpy span, and the results/diagram carry the "Advanced: IHX ε …" marker.
 
 ## Design principle — two tiers
 
@@ -79,10 +82,6 @@ B7. **PWA/offline support** — manifest + service worker caching the static
 
 ## Advanced operations (Advanced Tools section, closed by default)
 
-A7. **Internal heat exchanger (IHX)** — effectiveness input coupling
-    suction superheat to liquid subcooling. When enabled, the face's
-    diagram and results show the IHX cycle, marked per the
-    "Advanced: …" rule above.
 A8. **Transcritical R-744 gas-cooler cycle** — gas-cooler pressure +
     exit-temperature inputs, optimum-pressure hint; needs supercritical
     table columns above P_crit (schema-compatible addition). Transcritical
@@ -92,7 +91,7 @@ A9. **Two-stage / cascade cycle builder** — intercooler pressure
     `cycle.js` rework. Last because it depends on A8-style multi-state
     rendering.
 
-Suggested order: A7 → B7 → A8 → A9.
+Suggested order: B7 → A8 → A9.
 
 ## Working notes for contributors
 

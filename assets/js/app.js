@@ -4,7 +4,7 @@
  */
 import backend from "./tables.js?v=20260923a";
 import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath, coilProfiles, advancedMetrics,
-  isoLines, lookupFromTS, sweepCycle, superheatTable } from "./cycle.js?v=20260923c";
+  isoLines, lookupFromTS, sweepCycle, superheatTable } from "./cycle.js?v=20260923d";
 import { getRefrigerantList, getRefrigerantInfo } from "./refrigerants.js";
 import {
   setStatus, populateRefrigerantSelector, onRefrigerantChange,
@@ -19,11 +19,11 @@ import {
   refreshUnitLabels, refreshLookupFields, onUnitToggle,
   showToolError, getSweepInputs, setSweepRange, renderSweep, buildSweepCSV,
   getSuperheatInputs, setSuperheatDefaults, renderSuperheatTable, buildSuperheatCSV,
-  renderHistory, onHistoryAction,
-} from "./ui.js?v=20260923e";  // versioned: new exports must not meet a cached ui.js
+  renderHistory, onHistoryAction, onIhxChange,
+} from "./ui.js?v=20260923f";  // versioned: new exports must not meet a cached ui.js
 import {
   initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker, onDiagramPick,
-} from "./chart.js?v=20260923b";
+} from "./chart.js?v=20260923c";
 import * as units from "./units.js?v=20260923a";
 
 let currentFluidKey = null;
@@ -80,6 +80,11 @@ async function init() {
     await selectFluid(key);
   });
   onComparisonChange(handleComparisonChange);
+  // IHX alters the main cycle: re-flag it and re-run a calculated cycle
+  onIhxChange(async () => {
+    _refreshAdvancedMarkers();
+    if (lastInputs) await handleCalc();
+  });
   onCapacityChange(() => {
     if (!last) return;
     _attachAdvanced();
@@ -451,6 +456,8 @@ async function handleDiagramPick({ mode, x, y }) {
 /** Flag the results + diagram with every active advanced option. */
 function _refreshAdvancedMarkers() {
   const labels = [];
+  const ihx = getInputs().ihx_eff;
+  if (ihx > 0) labels.push(`IHX ε ${Math.round(ihx * 100)} %`);
   const compKey = getComparisonFluid(currentFluidKey);
   if (compKey) {
     const sel = document.getElementById("compare-fluid");
@@ -491,6 +498,9 @@ async function handleCalc() {
   }
   if (inputs.eta_isen <= 0 || inputs.eta_isen > 1) {
     showError("Compressor: isentropic efficiency must be between 10 % and 100 %."); return;
+  }
+  if (Number.isNaN(inputs.ihx_eff) || inputs.ihx_eff < 0 || inputs.ihx_eff > 1) {
+    showError("Internal heat exchanger (Advanced Tools): effectiveness must be between 1 % and 100 %."); return;
   }
 
   // Range validation against fluid metadata (friendly, in display units)
@@ -541,7 +551,7 @@ async function handleCalc() {
     const states = await computeVCRCStates(backend, inputs);
     const metrics = analyzeVCRC(states);
     const { warnings, notes } = validateCycle(states);
-    const expPath = await expansionPath(backend, states[2], states[3]);
+    const expPath = await expansionPath(backend, states.ihx ? states.ihx.liquid : states[2], states[3]);
     const coils = await coilProfiles(backend, states, inputs);
     const primary = { key: currentFluidKey, states, metrics, warnings, notes, expPath, coils };
 
@@ -554,7 +564,7 @@ async function handleCalc() {
         const cStates = await computeVCRCStates(backend, inputs);
         comparison = {
           key: compKey, states: cStates, metrics: analyzeVCRC(cStates),
-          expPath: await expansionPath(backend, cStates[2], cStates[3]),
+          expPath: await expansionPath(backend, cStates.ihx ? cStates.ihx.liquid : cStates[2], cStates[3]),
           coils: await coilProfiles(backend, cStates, inputs),
         };
       } catch (err) {
@@ -686,6 +696,7 @@ function _buildShareURL() {
     else p.set("sc", +lastInputs.dT_sc_K.toFixed(2));
   }
   if (lastInputs.eta_isen < 1) p.set("eta", Math.round(lastInputs.eta_isen * 100));
+  if (lastInputs.ihx_eff > 0) p.set("ihx", Math.round(lastInputs.ihx_eff * 100));
   const cap = getCapacityKW();
   if (cap) {
     p.set("q", +cap.toFixed(4));
@@ -724,7 +735,9 @@ async function _applyShareParams(p) {
     dT_sc_K: parseFloat(p.get("sc")),
     P_cond_kPa: parseFloat(p.get("scp")),
     eta_isen: p.has("eta") ? parseFloat(p.get("eta")) / 100 : 1,
+    ihx_eff: p.has("ihx") ? parseFloat(p.get("ihx")) / 100 : 0,
   });
+  if (p.has("ihx")) openAdvancedSection();
   await handleCalc();
 }
 

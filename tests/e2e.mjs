@@ -55,7 +55,7 @@ function diff(errs, name, got, want, tol, rel = false) {
 
 for (const c of truth.cycles) {
   const w = c.want;
-  const tag = (c.eta ? ` eta=${c.eta}` : '') +
+  const tag = (c.eta ? ` eta=${c.eta}` : '') + (c.ihx ? ` ihx=${c.ihx}` : '') +
               (c.sh_by === 'P' ? ' shByP' : '') + (c.sc_by === 'P' ? ' scByP' : '');
   const label = `cycle ${c.fluid} Te=${c.Te} Tc=${c.Tc} sh=${c.sh} sc=${c.sc}${tag}`;
   try {
@@ -70,6 +70,7 @@ for (const c of truth.cycles) {
       subcool: c.sc > 0, sc_by: c.sc_by || 'dT', dT_sc_K: c.sc,
       P_cond_kPa: c.sc_by === 'P' ? w.P2_kPa : NaN,
       eta_isen: c.eta || 1,
+      ihx_eff: c.ihx || 0,
     };
     const states = await computeVCRCStates(backend, inputs);
     const m = analyzeVCRC(states);
@@ -86,6 +87,16 @@ for (const c of truth.cycles) {
     diff(errs, 'h3', states[2].h, w.h3, TOL.h);
     diff(errs, 'P1', states[0].P_kPa, w.P1_kPa, TOL.P_rel, true);
     diff(errs, 'P2', states[1].P_kPa, w.P2_kPa, TOL.P_rel, true);
+    // internal heat exchanger: compressor inlet 1′ and valve inlet 3′
+    if (c.ihx) {
+      if (!states.ihx) errs.push('ihx states missing');
+      else {
+        diff(errs, 'h1s', states.ihx.suction.h, w.h1s, TOL.h);
+        diff(errs, 'T1s', states.ihx.suction.T_C, w.T1s, TOL.T);
+        diff(errs, 'h3s', states.ihx.liquid.h, w.h3s, TOL.h);
+        diff(errs, 'T3s', states.ihx.liquid.T_C, w.T3s, TOL.T);
+      }
+    }
     // glide-aware coil temperatures (two-phase inlet T4, dew/bubble points)
     if (w.T4 !== undefined) {
       const coil = await coilProfiles(backend, states, inputs);
@@ -161,7 +172,7 @@ for (const c of truth.props) {
 // --- Sensitivity sweeps: sweep points reproduce the truth cycles ------------
 
 // plain saturated cycles, grouped so one sweep covers several truth cases
-const plain = truth.cycles.filter(c => !c.sh && !c.sc && !c.eta && !c.sh_by && !c.sc_by);
+const plain = truth.cycles.filter(c => !c.sh && !c.sc && !c.eta && !c.ihx && !c.sh_by && !c.sc_by);
 for (const [variable, fixed, swept] of [['T1', 'Tc', 'Te'], ['T3', 'Te', 'Tc']]) {
   const groups = new Map();
   for (const c of plain) {
