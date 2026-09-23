@@ -36,8 +36,9 @@ no build step.
     cycle to refrigerant mass flow, compressor power, condenser heat
     rejection and compressor displacement.
 - **T-s and P-h diagrams** — saturation dome, cycle overlay with the true
-  constant-h expansion curve, lookup-state marker; pan/zoom with recenter,
-  PNG download.
+  constant-h expansion curve, lookup-state marker; faint labeled isobars
+  (T-s) / isotherms (P-h) at round values; click any point to look it up in
+  Property Lookup; pan/zoom with recenter, PNG download.
 - **Export & sharing** — copy results as CSV, copy a URL that reproduces the
   configured cycle (fluid, comparison, inputs, units, diagram).
 

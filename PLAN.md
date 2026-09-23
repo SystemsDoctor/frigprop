@@ -30,6 +30,10 @@ Tools now also has System Capacity (kW/TR → mass flow, compressor power,
 heat rejection, displacement) and Cycle Metrics (volumetric capacity,
 specific displacement, Carnot COPs, second-law efficiency) from
 `advancedMetrics()` in `cycle.js`; they don't alter the cycle, so no marker.
+Diagrams carry faint isobars (T-s) / isotherms (P-h) at display-unit round
+values (`isoLines()` in `cycle.js`, labels kept in view by a Chart.js
+plugin), and a click on the plot fills and runs Property Lookup (P-h: PH;
+T-s: `lookupFromTS()` → TQ or TP with P solved by bisection).
 
 ## Design principle — two tiers
 
@@ -63,16 +67,6 @@ Each advanced calculation ships with CoolProp-truth cases in
 
 ## Basic improvements (main face)
 
-B3. **Faint isobar / isotherm grid lines on diagrams** — sparse
-    constant-P lines on T-s and constant-T lines on P-h, thin low-opacity
-    strokes behind the dome and cycle path, round values across the visible
-    range, one edge label each. `chart.js` adds one `pointRadius: 0` line
-    dataset per iso-line; points come from `tables.js` calls made by
-    `app.js` and passed in (keep `chart.js` free of thermodynamics).
-    Recompute on zoom/recenter so labels stay in view.
-B4. **Interactive diagram state picker** — clicking the T-s or P-h canvas
-    fills the Property Lookup pane with that state (TS/PH inversion
-    already in `tables.js`).
 B5. **Refrigerant gallery filter bar** — toggle chips above the gallery
     (All | Natural | HFO | HFC | Low-GWP | A1-only); pure DOM filter on
     existing card data.
@@ -104,7 +98,7 @@ A9. **Two-stage / cascade cycle builder** — intercooler pressure
     `cycle.js` rework. Last because it depends on A8-style multi-state
     rendering.
 
-Suggested order: B3–B6 →
+Suggested order: B5–B6 →
 A4–A6 → A7 → B7 → A8 → A9.
 
 ## Working notes for contributors

@@ -564,6 +564,15 @@ export function refreshLookupFields() {
   }
 }
 
+/** Fill the lookup pane from SI values (diagram picks); shows the pair's fields. */
+export function setLookupInputs(pair, v1, v2) {
+  $("lookup-pair").value = pair;
+  refreshLookupFields();
+  const def = PAIR_DEFS[pair];
+  $("lookup-v1").value = +units.toDisplay(v1, def.fields[0][1]).toPrecision(6);
+  if (def.fields.length > 1) $("lookup-v2").value = +units.toDisplay(v2, def.fields[1][1]).toPrecision(6);
+}
+
 export function wireLookupControls(onSubmit) {
   refreshLookupFields();  // initial labels + placeholders
   $("lookup-pair").addEventListener("change", () => {

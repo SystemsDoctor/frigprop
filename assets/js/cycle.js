@@ -169,6 +169,124 @@ export function advancedMetrics(states, metrics, coils, capacity_kW = null) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Diagram support — iso-lines and diagram-point inversion
+// ---------------------------------------------------------------------------
+
+/** n+1 points from a to b, log-spaced (both > 0). */
+function _logSpace(a, b, n) {
+  return Array.from({ length: n + 1 }, (_, i) => a * Math.pow(b / a, i / n));
+}
+
+/** Resolve a list of lookups, dropping those the tables cannot answer. */
+async function _tryAll(calls) {
+  const out = [];
+  for (const call of calls) {
+    try {
+      const st = await call();
+      out.push({ T_C: st.T_C, P_kPa: st.P_kPa, h: st.h, s: st.s });
+    } catch (_) { /* outside table coverage — the line just ends there */ }
+  }
+  return out;
+}
+
+/**
+ * Sample background iso-lines for the diagrams through the backend.
+ * Isobars (T-s): compressed liquid → two-phase shelf → superheated vapor.
+ * Isotherms (P-h): compressed liquid (high P) → two-phase → vapor (low P);
+ * above the saturation range an isotherm is vapor only.
+ * @param {object}   backend      — property backend, on the fluid to draw
+ * @param {number[]} pressures_kPa — isobar values
+ * @param {number[]} temps_C       — isotherm values
+ * @param {{T_lo_C: number, T_hi_C: number, P_lo_kPa: number, P_hi_kPa: number}} range
+ * @returns {Promise<{isobars: {value: number, pts: object[]}[], isotherms: {value: number, pts: object[]}[]}>}
+ */
+export async function isoLines(backend, pressures_kPa, temps_C, range) {
+  const Q = [0, 0.25, 0.5, 0.75, 1];
+  const isobars = [];
+  for (const P of pressures_kPa) {
+    let sat;
+    try { sat = await backend.getSatProps("P", P); } catch (_) { continue; }
+    const T0 = Math.max(range.T_lo_C, sat.T_bubble_C - 40);  // subcool grid reach
+    const Tliq = Array.from({ length: 5 }, (_, i) => T0 + i / 5 * (sat.T_bubble_C - T0));
+    const Tvap = Array.from({ length: 12 }, (_, i) =>
+      sat.T_dew_C + (i + 1) / 12 * Math.max(0, range.T_hi_C - sat.T_dew_C));
+    const pts = await _tryAll([
+      ...Tliq.map(T => () => backend.getProps("TP", T, P)),
+      ...Q.map(x => () => backend.getProps("PQ", P, x)),
+      ...Tvap.map(T => () => backend.getProps("TP", T, P)),
+    ]);
+    if (pts.length > 1) isobars.push({ value: P, pts });
+  }
+
+  const isotherms = [];
+  for (const T of temps_C) {
+    let sat = null;
+    try { sat = await backend.getSatProps("T", T); } catch (_) { /* above the dome */ }
+    const calls = [];
+    if (sat) {
+      if (range.P_hi_kPa > sat.P_bub_kPa) {
+        calls.push(..._logSpace(range.P_hi_kPa, sat.P_bub_kPa, 6).slice(0, -1)
+          .map(P => () => backend.getProps("TP", T, P)));
+      }
+      calls.push(...Q.map(x => () => backend.getProps("TQ", T, x)));
+      if (sat.P_dew_kPa > range.P_lo_kPa) {
+        calls.push(..._logSpace(sat.P_dew_kPa, range.P_lo_kPa, 12).slice(1)
+          .map(P => () => backend.getProps("TP", T, P)));
+      }
+    } else {
+      calls.push(..._logSpace(range.P_hi_kPa, range.P_lo_kPa, 16)
+        .map(P => () => backend.getProps("TP", T, P)));
+    }
+    const pts = await _tryAll(calls);
+    if (pts.length > 1) isotherms.push({ value: T, pts });
+  }
+  return { isobars, isotherms };
+}
+
+/**
+ * Lookup inputs for a point picked on the T-s diagram: T & quality inside
+ * the dome, otherwise T & P with P solved (log-bisection) so s(T, P) = s.
+ * @param {object} backend
+ * @param {number} T_C
+ * @param {number} s — kJ/kg·K
+ * @param {{P_lo_kPa: number, P_hi_kPa: number}} range — tabulated P extent
+ * @returns {Promise<{pair: "TQ"|"TP", v1: number, v2: number}>}
+ */
+export async function lookupFromTS(backend, T_C, s, range) {
+  let sat = null;
+  try { sat = await backend.getSatProps("T", T_C); } catch (_) { /* above the dome */ }
+  if (sat && s >= sat.sf && s <= sat.sg) {
+    return { pair: "TQ", v1: T_C, v2: (s - sat.sf) / (sat.sg - sat.sf) };
+  }
+  // superheated vapor lies at P below the dew pressure, compressed liquid
+  // above the bubble pressure. "near" is the saturation side, "far" the
+  // table edge, pulled in until the tables resolve it.
+  const vapor = !sat || s > sat.sg;
+  let near = vapor ? (sat ? sat.P_dew_kPa : range.P_hi_kPa) : sat.P_bub_kPa;
+  let far = vapor ? range.P_lo_kPa : range.P_hi_kPa;
+  const sAt = async P => (await backend.getProps("TP", T_C, P)).s;
+  let sFar = NaN;
+  for (let i = 0; i < 20 && Number.isNaN(sFar); i++) {
+    try { sFar = await sAt(far); } catch (_) { far = Math.sqrt(far * near); }
+  }
+  // s falls with P along an isotherm
+  if (!(vapor ? s <= sFar : s >= sFar)) {
+    throw new Error(`No tabulated state at T = ${T_C.toFixed(1)} °C, s = ${s.toFixed(3)} kJ/kg·K — ` +
+                    `outside the table coverage (${range.P_lo_kPa.toFixed(0)}–${range.P_hi_kPa.toFixed(0)} kPa, ` +
+                    `≤ 40 K subcooling)`);
+  }
+  for (let i = 0; i < 40; i++) {
+    const mid = Math.sqrt(near * far);
+    let sMid;
+    // the grid's saturation line can sit a hair off the sat table's —
+    // an unresolvable point next to it is on the saturation side
+    try { sMid = await sAt(mid); } catch (_) { near = mid; continue; }
+    if ((sMid > s) === vapor) far = mid; else near = mid;
+  }
+  return { pair: "TP", v1: T_C, v2: Math.sqrt(near * far) };
+}
+
 /**
  * Compute cycle performance from 4 state objects.
  * @param {object[]} states  — [state1, state2, state3, state4]

@@ -856,6 +856,12 @@ nav {
   opacity: 0.75;
 }
 
+.chart-hint {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  padding: 0 16px 10px;
+}
+
 /* Right-aligned, tightly grouped chart action buttons */
 .chart-btns {
   margin-left: auto;

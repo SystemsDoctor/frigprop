@@ -3,7 +3,8 @@
  * The property backend is swappable via this one import (same interface).
  */
 import backend from "./tables.js?v=20260923a";
-import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath, coilProfiles, advancedMetrics } from "./cycle.js?v=20260923a";
+import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath, coilProfiles, advancedMetrics,
+  isoLines, lookupFromTS } from "./cycle.js?v=20260923b";
 import { getRefrigerantList, getRefrigerantInfo } from "./refrigerants.js";
 import {
   setStatus, populateRefrigerantSelector, onRefrigerantChange,
@@ -13,13 +14,13 @@ import {
   populateComparisonSelect, getComparisonFluid, onComparisonChange,
   wireAdvancedSection, openAdvancedSection, setAdvancedMarkers,
   getCapacityKW, getCapacityUnit, setCapacity, onCapacityChange, renderAdvancedResults,
-  wireLookupControls, enableLookupButton, showLookupError,
+  wireLookupControls, enableLookupButton, showLookupError, setLookupInputs,
   renderLookupState, renderLookupSat,
   refreshUnitLabels, refreshLookupFields, onUnitToggle,
-} from "./ui.js?v=20260923a";  // versioned: new exports must not meet a cached ui.js
+} from "./ui.js?v=20260923b";  // versioned: new exports must not meet a cached ui.js
 import {
-  initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker,
-} from "./chart.js?v=20260923a";
+  initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker, onDiagramPick,
+} from "./chart.js?v=20260923b";
 import * as units from "./units.js?v=20260923a";
 
 let currentFluidKey = null;
@@ -39,6 +40,7 @@ async function init() {
   wireLookupControls(handleLookup);  // calls refreshLookupFields() internally
   onUnitToggle(handleUnitToggle);
   initCharts();
+  onDiagramPick(handleDiagramPick);
   refreshUnitLabels();
 
   try {
@@ -173,8 +175,65 @@ async function _updateDiagram() {
     const name = currentInfo ? currentInfo.ashrae_designation : currentFluidKey;
     fluidLabel.textContent = compare ? `${name} vs ${compKey}` : name;
   }
-  if (primary.satRows) updateCharts(primary, compare);
+  if (primary.satRows) updateCharts(primary, compare, await _isoLines(primary.satRows));
   _refreshAdvancedMarkers();
+}
+
+/** Tabulated pressure extent of the current fluid (kPa). */
+function _pRange(rows) {
+  return { P_lo_kPa: Math.min(rows[0][10], rows[0][11]),
+           P_hi_kPa: backend.getFluidMeta(currentFluidKey).P_max_kPa };
+}
+
+/**
+ * Backdrop iso-lines for the current fluid at values that are round in the
+ * display units: 1-2-5 (or sparser) pressures, even temperature steps.
+ */
+async function _isoLines(rows) {
+  const n = rows.length;
+  const states = [last && last.primary, last && last.comparison].flatMap(b => b ? b.states : []);
+  const T_hi = Math.max(rows[n - 1][0], ...states.map(s => s.T_C)) + 15;
+  const range = { T_lo_C: rows[0][0], T_hi_C: T_hi, ..._pRange(rows) };
+
+  const disp = (v, k) => units.toDisplay(v, k);
+  const pLo = disp(range.P_lo_kPa, "P"), pHi = disp(Math.max(rows[n - 1][10], rows[n - 1][11]), "P");
+  let pressures = [];
+  for (const mult of [[1, 2, 5], [1, 3], [1]]) {
+    pressures = [];
+    for (let e = Math.floor(Math.log10(pLo)); e <= Math.ceil(Math.log10(pHi)); e++) {
+      for (const m of mult) { const v = m * 10 ** e; if (v > pLo && v < pHi) pressures.push(v); }
+    }
+    if (pressures.length <= 9) break;
+  }
+  const tLo = disp(range.T_lo_C, "T"), tHi = disp(T_hi, "T");
+  const step = [5, 10, 20, 25, 50, 100].find(st => (tHi - tLo) / st <= 8) || 200;
+  const temps = [];
+  for (let v = Math.ceil(tLo / step) * step; v < tHi; v += step) temps.push(v);
+
+  try {
+    await backend.init(currentFluidKey);  // cached; comparison may have switched fluid
+    return await isoLines(backend, pressures.map(v => units.fromInput(v, "P")),
+                          temps.map(v => units.fromInput(v, "T")), range);
+  } catch (_) {
+    return null;  // backdrop only — never block the diagram
+  }
+}
+
+/** Diagram click → fill and run the Property Lookup at that point. */
+async function handleDiagramPick({ mode, x, y }) {
+  if (!currentFluidKey) return;
+  try {
+    await backend.init(currentFluidKey);
+    const spec = mode === "ph"
+      ? { pair: "PH", v1: y, v2: x }
+      : await lookupFromTS(backend, y, x, _pRange(backend.getSatRows(currentFluidKey)));
+    setLookupInputs(spec.pair, spec.v1, spec.v2);
+    await handleLookup(spec);
+  } catch (_) {
+    setLookupMarker(null);
+    showLookupError(`That diagram point is outside the tabulated region for ${currentFluidKey} — ` +
+                    `pick inside the dome or in the vapor region.`);
+  }
 }
 
 /** Flag the results + diagram with every active advanced option. */

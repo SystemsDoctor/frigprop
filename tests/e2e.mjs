@@ -30,7 +30,7 @@ globalThis.fetch = async (url) => {
 };
 
 const backend = (await import(path.join(ROOT, 'assets/js/tables.js'))).default;
-const { computeVCRCStates, analyzeVCRC, coilProfiles, advancedMetrics } = await import(path.join(ROOT, 'assets/js/cycle.js'));
+const { computeVCRCStates, analyzeVCRC, coilProfiles, advancedMetrics, lookupFromTS } = await import(path.join(ROOT, 'assets/js/cycle.js'));
 const truth = JSON.parse(await readFile(path.join(ROOT, 'tests/truth.json'), 'utf8'));
 
 let pass = 0;
@@ -130,6 +130,31 @@ for (const c of truth.props) {
   } catch (e) {
     failures.push(`${label}: threw ${e.message}`);
   }
+}
+
+// --- Diagram picks: T-s point → lookup inputs (superheated vapor cases) -------
+
+for (const c of truth.props) {
+  if (c.pair !== 'TP') continue;
+  const w = c.want;
+  try {
+    await backend.init(c.fluid);
+    const sat = await backend.getSatProps('P', w.P_kPa);
+    if (w.T_C <= sat.T_dew_C + 0.5) continue;  // vapor only (liquid s is ~P-independent)
+    const rows = backend.getSatRows(c.fluid);
+    const range = { P_lo_kPa: Math.min(rows[0][10], rows[0][11]),
+                    P_hi_kPa: backend.getFluidMeta(c.fluid).P_max_kPa };
+    const label = `pick T-s ${c.fluid} (T=${w.T_C.toFixed(2)}, s=${w.s.toFixed(4)})`;
+    try {
+      const L = await lookupFromTS(backend, w.T_C, w.s, range);
+      const errs = [];
+      if (L.pair !== 'TP') errs.push(`pair ${L.pair}`);
+      diff(errs, 'P', L.v2, w.P_kPa, TOL.P_rel, true);
+      check(label, errs);
+    } catch (e) {
+      failures.push(`${label}: threw ${e.message}`);
+    }
+  } catch (_) { /* case outside sat-by-P coverage — covered by props section */ }
 }
 
 // --- Report ------------------------------------------------------------------
