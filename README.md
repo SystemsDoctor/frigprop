@@ -4,18 +4,31 @@ Interactive refrigerant property lookup and vapor-compression refrigeration
 cycle (VCRC) analysis. Runs entirely in-browser — static files, no server,
 no build step.
 
-**Live tool:** https://www.frigprop.com
+**Live tool:** https://www.frigprop.com · **Version 2.0**
+
+## What's new in 2.0
+
+- **R-449A** joins the gallery (28 refrigerants), and gallery filter chips.
+- **Advanced Tools** — a new section, closed by default, for everything
+  beyond the basic lookup and cycle: internal heat exchanger, capacity
+  sizing, volumetric and Carnot metrics, sensitivity sweeps, superheated
+  vapor tables and recent cycles (the two-fluid comparison moved here).
+- **Glide-aware coil temperatures** for zeotropic blends, with a more
+  accurate two-phase temperature across the glide.
+- **Diagrams**: faint labeled isobars / isotherms, and click-to-look-up.
+- **Saturation table CSV** export.
+- **Offline** use and installable web app.
 
 ## Features
+
+The main page stays a straightforward property lookup and cycle diagram;
+everything else lives in the collapsed **Advanced Tools** section.
 
 - **Refrigerant gallery** — 28 modern and legacy refrigerants, clustered by
   family (natural → HFO → HFC → HCFC → CFC), with safety class, GWP (AR4/AR5),
   ODP, regulatory status, typical applications, and replacement lineage.
   Filter chips (All, Natural, HFO, HFC, Legacy, GWP < 150, A1 only).
   Keyboard navigable (arrow keys + Enter).
-- **Offline / installable** — a service worker caches the app and every
-  refrigerant table (~1.6 MB) on the first visit, so everything works
-  offline afterwards; the web manifest lets browsers install it as an app.
 - **Property lookup** — full thermodynamic state (T, P, h, s, u, v, ρ, x, cp)
   from any supported input pair: T&P, P&h, P&s, T&quality, P&quality, plus
   saturation-row views at a given T or P (bubble/dew shown separately for
@@ -28,21 +41,29 @@ no build step.
   pressure ratio, and discharge temperature. For zeotropic blends it also
   shows each coil's temperature glide: evaporator inlet → dew point,
   condenser dew point → bubble point, and the mean temperatures.
-- **Advanced Tools** — a collapsed-by-default section below the diagram for
-  options beyond the basic cycle. Any option that changes the cycle results
-  or diagram flags them with an orange "Advanced: …" marker.
-  - **Internal heat exchanger** — suction-line IHX with effectiveness ε:
-    the main cycle gains states 1′ (compressor inlet) and 3′ (valve inlet),
-    Q_IHX is reported, and results/diagram carry "Advanced: IHX ε …".
+- **T-s and P-h diagrams** — saturation dome, cycle overlay with the true
+  constant-h expansion curve, lookup-state marker; faint labeled isobars
+  (T-s) / isotherms (P-h) at round values; click any point to look it up in
+  Property Lookup; pan/zoom with recenter, PNG download.
+- **Export & sharing** — copy results as CSV, copy a URL that reproduces the
+  configured cycle (fluid, inputs, units, diagram, and any comparison, heat
+  exchanger or capacity).
+- **Advanced Tools** — collapsed by default below the diagram. Options that
+  change the main cycle (the comparison and the heat exchanger) flag the
+  results and diagram with an orange "Advanced: …" marker; the others show
+  their output inside the section.
   - **Side-by-side comparison** — run the same cycle on a second
     refrigerant: overlaid saturation domes and cycles in distinct colors,
     metrics table.
-  - **Cycle metrics** — volumetric cooling capacity and specific
-    displacement, Carnot COP between the mean evaporating/condensing
-    temperatures, and second-law efficiency (for both fluids when comparing).
+  - **Internal heat exchanger** — suction-line IHX with effectiveness ε:
+    the main cycle gains states 1′ (compressor inlet) and 3′ (valve inlet),
+    and Q_IHX is reported.
   - **System capacity** — optional cooling capacity (kW or TR) scales the
     cycle to refrigerant mass flow, compressor power, condenser heat
     rejection and compressor displacement.
+  - **Cycle metrics** — volumetric cooling capacity and specific
+    displacement, Carnot COP between the mean evaporating/condensing
+    temperatures, and second-law efficiency (for both fluids when comparing).
   - **Sensitivity sweep** — re-run the cycle over a range of evaporating or
     condensing temperatures; COP and discharge-temperature charts (both
     fluids when comparing), a table view and CSV.
@@ -50,16 +71,13 @@ no build step.
     grid for the selected refrigerant; CSV of all properties.
   - **Recent cycles** — the cycles calculated in this tab, with pinning
     (kept across reloads) and one-click recall.
-- **T-s and P-h diagrams** — saturation dome, cycle overlay with the true
-  constant-h expansion curve, lookup-state marker; faint labeled isobars
-  (T-s) / isotherms (P-h) at round values; click any point to look it up in
-  Property Lookup; pan/zoom with recenter, PNG download.
-- **Export & sharing** — copy results as CSV, copy a URL that reproduces the
-  configured cycle (fluid, comparison, inputs, units, diagram).
+- **Offline / installable** — a service worker caches the app and every
+  refrigerant table (~1.6 MB) on the first visit, so everything works
+  offline afterwards; the web manifest lets browsers install it as an app.
 
 ## Refrigerants (28)
 
-- **Modern / low-GWP:** R-32, R-1234yf, R-1234ze(E), R-1233zd(E), R-454B,
+- **Modern / lower-GWP:** R-32, R-1234yf, R-1234ze(E), R-1233zd(E), R-454B,
   R-452B, R-449A, R-513A, R-152a
 - **Legacy HFC / HCFC / CFC:** R-134a, R-410A, R-407C, R-404A, R-507A, R-23,
   R-22, R-123, R-12, R-11
@@ -74,9 +92,11 @@ CoolProp tables (`tables/`). Single-phase grids are indexed by distance from
 saturation (ΔT, P) with log-P interpolation, which keeps accuracy high where
 cycles actually live. The end-to-end pipeline is held to ±1 % COP,
 ±0.5 kJ/kg enthalpy, ±0.002 kJ/kg·K entropy, and ±0.3 K temperature against
-CoolProp across a ~1600-case matrix (`tests/`) spanning the cycle condition
+CoolProp across ~2,400 checks (`tests/`) spanning the cycle condition
 range, η < 1 compression, pressure-specified superheat/subcool, two-phase
-qualities, deep superheat/subcool, and near-critical interpolation.
+qualities, deep superheat/subcool, near-critical interpolation, glide-aware
+coil temperatures, internal-heat-exchanger cycles, the Advanced Tools
+metrics, sensitivity sweeps, superheated tables and diagram picks.
 
 ### Accuracy notes
 
@@ -86,8 +106,14 @@ qualities, deep superheat/subcool, and near-critical interpolation.
   side; two-phase temperatures follow a quadratic in quality through the
   bubble, mid-glide (Q = 0.5) and dew points, held to the ±0.3 K gate against
   CoolProp's equilibrium temperature (worst case ~0.12 K, R-449A).
-- The cycle model is subcritical only; transcritical operation (e.g. R-744
-  above 31 °C) is detected and blocked with an explanation.
+- The cycle model is single-stage and subcritical; transcritical operation
+  (e.g. R-744 above 31 °C) is detected and blocked with an explanation.
+  A transcritical gas-cooler cycle and two-stage / cascade cycles are
+  planned for a future release (`PLAN.md`).
+- Internal heat exchanger: the tables cover liquid within 40 K of
+  saturation, so where the liquid side's maximum cooling lies beyond that,
+  the vapor side (lower cp) is taken as limiting — true for normal fluids
+  and checked against CoolProp in the harness.
 - Compression is isentropic by default (η adjustable); dry fluids (R-600a,
   R-1234yf) legitimately end two-phase from a saturated-vapor inlet — the
   tool notes this rather than flagging an error.
@@ -114,7 +140,8 @@ python3 scripts/generate_tables.py R134a      # one fluid
 
 ```bash
 python3 scripts/gen_truth.py   # regenerate tests/truth.json (needs CoolProp)
-node tests/e2e.mjs             # run the harness (no Python needed)
+node tests/e2e.mjs             # run the accuracy harness (no Python needed)
+node tests/units.mjs           # unit-conversion checks
 ```
 
 CI runs the harness on every push/PR; deploys to GitHub Pages go through the
