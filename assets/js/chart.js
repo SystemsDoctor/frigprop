@@ -5,7 +5,7 @@
  * Pure rendering: states/paths are computed upstream (cycle.js via app.js).
  */
 
-import * as units from "./units.js";
+import * as units from "./units.js?v=20260923a";
 
 // Primary fluid keeps the classic palette; the comparison fluid gets its own.
 const PALETTES = [

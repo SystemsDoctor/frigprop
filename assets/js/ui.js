@@ -4,7 +4,7 @@
  * boundary in SI; display conversion goes through units.js.
  */
 
-import * as units from "./units.js";
+import * as units from "./units.js?v=20260923a";
 
 const $ = id => document.getElementById(id);
 
@@ -385,6 +385,96 @@ export function openAdvancedSection() {
   $("advanced-tools").open = true;
 }
 
+const KW_PER_TR = 3.516853;  // 1 ton of refrigeration = 12 000 Btu/h
+
+/** Cooling capacity entered under Advanced Tools, in kW, or null when blank/invalid. */
+export function getCapacityKW() {
+  const v = parseFloat($("capacity").value);
+  if (!(v > 0)) return null;
+  return $("capacity-unit").value === "TR" ? v * KW_PER_TR : v;
+}
+
+/** Capacity unit picker value: "kW" or "TR". */
+export function getCapacityUnit() {
+  return $("capacity-unit").value;
+}
+
+/** Restore a capacity (kW) shown in the given unit ("kW" | "TR"). */
+export function setCapacity(kW, unit) {
+  $("capacity-unit").value = unit === "TR" ? "TR" : "kW";
+  const v = unit === "TR" ? kW / KW_PER_TR : kW;
+  $("capacity").value = +v.toFixed(4);
+}
+
+export function onCapacityChange(handler) {
+  $("capacity").addEventListener("input", handler);
+  $("capacity-unit").addEventListener("change", handler);
+}
+
+// Advanced metric rows: [label (HTML), getter(adv) → SI value, unit-kind|null, decimals]
+const ADV_ROWS = [
+  ["Volumetric cooling capacity",       a => a.q_vol_kJ_m3,       "vcc",   0],
+  ["Specific displacement",             a => a.disp_spec_m3_h_kW, "vspec", 3],
+  ["Carnot temps T<sub>L</sub> / T<sub>H</sub>", null,           "T",     2],
+  ["COP<sub>Carnot</sub> — Cooling",    a => a.COP_carnot_c,      null,    3],
+  ["COP<sub>Carnot</sub> — Heating",    a => a.COP_carnot_h,      null,    3],
+  ["Second-law efficiency — Cooling",   a => a.eta_II_c * 100,    "%",     1],
+  ["Second-law efficiency — Heating",   a => a.eta_II_h * 100,    "%",     1],
+];
+const CAP_ROWS = [
+  ["Refrigerant mass flow",             c => c.m_dot_kg_s,        "mdot",  4],
+  ["Compressor power",                  c => c.W_kW,              "power", 2],
+  ["Condenser heat rejection",          c => c.Q_cond_kW,         "power", 2],
+  ["Compressor displacement",           c => c.V_disp_m3_h,       "vflow", 2],
+];
+
+// US-unit decimals where the magnitudes differ a lot from SI
+const IP_DECIMALS = { power: 0, vcc: 1, vflow: 1, mdot: 2 };
+
+/** One formatted advanced value (display units). */
+function _advCell(v, kind, dec) {
+  if (kind === "%") return `${fmt(v, dec)} <span class="unit">%</span>`;
+  if (!kind) return fmt(v, dec);
+  const d = units.getSystem() === "IP" && kind in IP_DECIMALS ? IP_DECIMALS[kind] : dec;
+  return `${du(v, kind, d)} <span class="unit">${units.label(kind)}</span>`;
+}
+
+/**
+ * Render the Advanced Tools cycle-metrics table for the last cycle
+ * (a second column when a comparison ran); null clears it.
+ * @param {object|null} primary     — bundle with .key and .adv (advancedMetrics)
+ * @param {object|null} comparison
+ */
+export function renderAdvancedResults(primary, comparison) {
+  const box = $("adv-results");
+  if (!primary || !primary.adv) {
+    box.innerHTML = '<p class="adv-note adv-empty">Calculate a cycle to see these metrics.</p>';
+    return;
+  }
+  const cols = [primary, comparison].filter(b => b && b.adv);
+  const row = ([label, get, kind, dec], pick) => `
+      <tr><td style="text-align:left;color:var(--text-dim)">${label}</td>
+      ${cols.map(b => {
+        const src = pick(b.adv);
+        if (!src) return "<td>—</td>";
+        if (!get) return `<td>${du(src.T_L_C, "T", dec)} / ${du(src.T_H_C, "T", dec)} <span class="unit">${units.label("T")}</span></td>`;
+        return `<td>${_advCell(get(src), kind, dec)}</td>`;
+      }).join("")}</tr>`;
+  // one capacity input drives every column
+  const cap = primary.adv.capacity;
+  const capRows = cap
+    ? `<tr><td colspan="${cols.length + 1}" class="adv-subhead">At ${getCapacityUnit() === "TR"
+        ? `${fmt(cap.Q_evap_kW / KW_PER_TR, 2)} TR (${_advCell(cap.Q_evap_kW, "power", 2)})`
+        : _advCell(cap.Q_evap_kW, "power", 2)} cooling</td></tr>` +
+      CAP_ROWS.map(r => row(r, a => a.capacity)).join("")
+    : "";
+  box.innerHTML = `
+    <table class="results-table" aria-label="Advanced cycle metrics">
+      <thead><tr><th style="text-align:left">Metric</th>${cols.map(b => `<th>${b.key}</th>`).join("")}</tr></thead>
+      <tbody>${ADV_ROWS.map(r => row(r, a => a)).join("")}${capRows}</tbody>
+    </table>`;
+}
+
 /**
  * Flag the results, diagram and Advanced Tools headers with the advanced
  * options currently affecting the cycle; an empty list hides the flags.
@@ -751,7 +841,7 @@ function _renderComparisonMetrics(primary, comparison) {
 export function buildResultsCSV(primary, comparison) {
   const L = k => units.label(k);
   const lines = [];
-  const block = ({ key, states, metrics, coils }) => {
+  const block = ({ key, states, metrics, coils, adv }) => {
     lines.push(`Fluid,${key}`);
     lines.push(`State,T (${L("T")}),P (${L("P")}),h (${L("h")}),s (${L("s")}),u (${L("u")}),x,rho (${L("rho")})`);
     states.forEach((s, i) => lines.push([
@@ -774,6 +864,24 @@ export function buildResultsCSV(primary, comparison) {
       lines.push(`Condenser dew T (${L("T")}),${du(c.T_dew_C, "T", 2)}`);
       lines.push(`Condenser bubble T (${L("T")}),${du(c.T_bub_C, "T", 2)}`);
       lines.push(`Condensing glide (${L("dT")}),${du(c.glide_K, "dT", 2)}`);
+    }
+    if (adv) {
+      lines.push(`Volumetric cooling capacity (${L("vcc")}),${du(adv.q_vol_kJ_m3, "vcc", 2)}`);
+      lines.push(`Specific displacement (${L("vspec")}),${du(adv.disp_spec_m3_h_kW, "vspec", 4)}`);
+      lines.push(`Carnot T_L (${L("T")}),${du(adv.T_L_C, "T", 2)}`);
+      lines.push(`Carnot T_H (${L("T")}),${du(adv.T_H_C, "T", 2)}`);
+      lines.push(`COP_Carnot_c,${fmt(adv.COP_carnot_c, 3)}`);
+      lines.push(`COP_Carnot_h,${fmt(adv.COP_carnot_h, 3)}`);
+      lines.push(`Second-law efficiency cooling (%),${fmt(adv.eta_II_c * 100, 1)}`);
+      lines.push(`Second-law efficiency heating (%),${fmt(adv.eta_II_h * 100, 1)}`);
+      const cap = adv.capacity;
+      if (cap) {
+        lines.push(`Cooling capacity (${L("power")}),${du(cap.Q_evap_kW, "power", 2)}`);
+        lines.push(`Refrigerant mass flow (${L("mdot")}),${du(cap.m_dot_kg_s, "mdot", 4)}`);
+        lines.push(`Compressor power (${L("power")}),${du(cap.W_kW, "power", 2)}`);
+        lines.push(`Condenser heat rejection (${L("power")}),${du(cap.Q_cond_kW, "power", 2)}`);
+        lines.push(`Compressor displacement (${L("vflow")}),${du(cap.V_disp_m3_h, "vflow", 2)}`);
+      }
     }
   };
   block(primary);

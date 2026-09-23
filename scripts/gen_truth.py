@@ -13,7 +13,9 @@ Two-phase h/s/u/rho truth mixes the CoolProp-exact saturation endpoints
 linearly in quality (the tool's documented convention); two-phase T is the
 CoolProp equilibrium temperature at that (P, h), so zeotropic glide
 curvature is held to the T gate. Cycle cases also carry the glide-aware
-coil temperatures (evaporator inlet T4, dew/bubble at both pressures).
+coil temperatures (evaporator inlet T4, dew/bubble at both pressures) and
+suction density rho1, from which the harness derives the Advanced Tools
+truth (volumetric capacity, Carnot COP, capacity scaling).
 """
 
 import json
@@ -115,9 +117,11 @@ def cycle_truth(cp_name, Te_C, Tc_C, sh_K, sc_K, eta=1.0):
     if sh_K > 0:
         h1 = CP.PropsSI("H", "T", K(Te_C) + sh_K, "P", P1, cp_name)
         s1 = CP.PropsSI("S", "T", K(Te_C) + sh_K, "P", P1, cp_name)
+        rho1 = CP.PropsSI("D", "T", K(Te_C) + sh_K, "P", P1, cp_name)
     else:
         h1 = CP.PropsSI("H", "T", K(Te_C), "Q", 1, cp_name)
         s1 = CP.PropsSI("S", "T", K(Te_C), "Q", 1, cp_name)
+        rho1 = CP.PropsSI("D", "P", P1, "Q", 1, cp_name)
     P2 = CP.PropsSI("P", "T", K(Tc_C), "Q", 0, cp_name)
     h2, T2 = isentropic_to(cp_name, P2, s1)
     if eta < 1:
@@ -133,7 +137,7 @@ def cycle_truth(cp_name, Te_C, Tc_C, sh_K, sc_K, eta=1.0):
         "h1": h1 / 1000.0, "s1": s1 / 1000.0, "h2": h2 / 1000.0,
         "T2": T2 - 273.15, "h3": h3 / 1000.0,
         "P1_kPa": P1 / 1000.0, "P2_kPa": P2 / 1000.0,
-        "W": W, "Qe": Qe, "COP": Qe / W,
+        "W": W, "Qe": Qe, "COP": Qe / W, "rho1": rho1,
         # glide-aware coil temperatures
         "T4": T_two_phase(cp_name, P1, h3) - 273.15,
         "T_dew_evap": CP.PropsSI("T", "P", P1, "Q", 1, cp_name) - 273.15,

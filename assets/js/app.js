@@ -2,8 +2,8 @@
  * app.js — Controller. Wires backend + cycle logic + UI together.
  * The property backend is swappable via this one import (same interface).
  */
-import backend from "./tables.js?v=20260922b";
-import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath, coilProfiles } from "./cycle.js?v=20260922b";
+import backend from "./tables.js?v=20260923a";
+import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath, coilProfiles, advancedMetrics } from "./cycle.js?v=20260923a";
 import { getRefrigerantList, getRefrigerantInfo } from "./refrigerants.js";
 import {
   setStatus, populateRefrigerantSelector, onRefrigerantChange,
@@ -12,14 +12,15 @@ import {
   renderResults, buildResultsCSV, showTranscritWarning, highlightRefCard,
   populateComparisonSelect, getComparisonFluid, onComparisonChange,
   wireAdvancedSection, openAdvancedSection, setAdvancedMarkers,
+  getCapacityKW, getCapacityUnit, setCapacity, onCapacityChange, renderAdvancedResults,
   wireLookupControls, enableLookupButton, showLookupError,
   renderLookupState, renderLookupSat,
   refreshUnitLabels, refreshLookupFields, onUnitToggle,
-} from "./ui.js?v=20260922b";  // versioned: new exports must not meet a cached ui.js
+} from "./ui.js?v=20260923a";  // versioned: new exports must not meet a cached ui.js
 import {
   initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker,
-} from "./chart.js";
-import * as units from "./units.js";
+} from "./chart.js?v=20260923a";
+import * as units from "./units.js?v=20260923a";
 
 let currentFluidKey = null;
 let currentInfo = null;
@@ -72,6 +73,11 @@ async function init() {
     await selectFluid(key);
   });
   onComparisonChange(handleComparisonChange);
+  onCapacityChange(() => {
+    if (!last) return;
+    _attachAdvanced();
+    renderAdvancedResults(last.primary, last.comparison);
+  });
   onCalcClick(handleCalc);
 
   const csvBtn = document.getElementById("export-csv-btn");
@@ -111,6 +117,7 @@ async function selectFluid(key) {
     clearError();
     // Hide old results
     document.getElementById("results-section").classList.add("hidden");
+    renderAdvancedResults(null);
     document.getElementById("warnings-box").classList.add("hidden");
     document.getElementById("notes-box").classList.add("hidden");
     document.getElementById("transcrit-notice").classList.add("hidden");
@@ -288,7 +295,9 @@ async function handleCalc() {
 
     last = { primary, comparison };
     lastInputs = inputs;
+    _attachAdvanced();
     renderResults(primary, comparison);
+    renderAdvancedResults(primary, comparison);
     await _updateDiagram();
     setStatus("ready", `Ready — ${currentFluidKey}`);
   } catch (err) {
@@ -296,6 +305,14 @@ async function handleCalc() {
     showError(`Calculation error: ${err.message}`);
   } finally {
     enableCalcButton(true);
+  }
+}
+
+/** (Re)compute the Advanced Tools metrics on the last cycle bundles. */
+function _attachAdvanced() {
+  const cap = getCapacityKW();
+  for (const b of [last.primary, last.comparison]) {
+    if (b) b.adv = advancedMetrics(b.states, b.metrics, b.coils, cap);
   }
 }
 
@@ -338,7 +355,10 @@ function handleUnitToggle() {
   const meta = currentFluidKey ? backend.getFluidMeta(currentFluidKey) : null;
   if (meta) setRangeHint(meta);
   if (currentInfo) renderInfoPanel(currentFluidKey, currentInfo, meta);
-  if (last) renderResults(last.primary, last.comparison);
+  if (last) {
+    renderResults(last.primary, last.comparison);
+    renderAdvancedResults(last.primary, last.comparison);
+  }
   if (lastLookup) {
     if (lastLookup.kind === "sat") renderLookupSat(lastLookup.data);
     else renderLookupState(lastLookup.data, lastLookup.phaseLabel);
@@ -386,6 +406,11 @@ function _buildShareURL() {
     else p.set("sc", +lastInputs.dT_sc_K.toFixed(2));
   }
   if (lastInputs.eta_isen < 1) p.set("eta", Math.round(lastInputs.eta_isen * 100));
+  const cap = getCapacityKW();
+  if (cap) {
+    p.set("q", +cap.toFixed(4));
+    if (getCapacityUnit() === "TR") p.set("qu", "TR");
+  }
   if (units.getSystem() === "IP") p.set("u", "IP");
   if (getChartMode() !== "ts") p.set("d", getChartMode());
   return `${location.origin}${location.pathname}?${p}`;
@@ -399,6 +424,11 @@ async function _applyShareParams(p) {
     document.getElementById("compare-fluid").value = compKey;
     openAdvancedSection();
     await handleComparisonChange();
+  }
+  const q = parseFloat(p.get("q"));
+  if (q > 0) {
+    setCapacity(q, p.get("qu"));
+    openAdvancedSection();
   }
   const te = parseFloat(p.get("te"));
   const tc = parseFloat(p.get("tc"));

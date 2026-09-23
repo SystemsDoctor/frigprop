@@ -47,6 +47,9 @@ Roadmap: `PLAN.md`. Data formats: `.claude/docs/data-schemas.md`.
   the existing `--accent*`/panel patterns rather than inventing new ones.
 - When changing `style.css` or any `assets/js/*`, bump the `?v=` query on the
   stylesheet/script tags in `index.html` — GitHub Pages caches assets ~10 min
-  and a stale-CSS/fresh-HTML mix breaks the layout for viewers.
+  and a stale-CSS/fresh-HTML mix breaks the layout for viewers. Module imports
+  carry `?v=` too (in `app.js`, plus `units.js` from `ui.js`/`chart.js`):
+  bump the stamp of any changed module, and keep one identical stamp on all
+  imports of `units.js` so it stays a single module instance.
 - Errors thrown by the backend must state the value and the valid range;
   the UI must turn them into friendly messages, never raw exceptions.

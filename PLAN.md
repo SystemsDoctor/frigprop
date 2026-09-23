@@ -25,7 +25,11 @@ Glide-aware coil profiles (`coilProfiles()` in `cycle.js`) show evaporator
 inlet → dew and condenser dew → bubble temperatures, glides and means for
 zeotropes; two-phase T across a glide is now quadratic through the
 mid-glide point (R-449A evaporator-inlet error 0.47 K → 0.12 K vs CoolProp
-equilibrium), with truth cases for all four coil temperatures.
+equilibrium), with truth cases for all four coil temperatures. Advanced
+Tools now also has System Capacity (kW/TR → mass flow, compressor power,
+heat rejection, displacement) and Cycle Metrics (volumetric capacity,
+specific displacement, Carnot COPs, second-law efficiency) from
+`advancedMetrics()` in `cycle.js`; they don't alter the cycle, so no marker.
 
 ## Design principle — two tiers
 
@@ -80,14 +84,6 @@ B7. **PWA/offline support** — manifest + service worker caching the static
 
 ## Advanced operations (Advanced Tools section, closed by default)
 
-A1. **Capacity + mass-flow** — optional capacity input (kW or tons of
-    refrigeration) → mass flow (kg/s), compressor power (kW), condenser
-    rejection (kW). Arithmetic on existing metrics.
-A2. **Volumetric metrics** — volumetric cooling capacity (ρ₁·q_evap,
-    kJ/m³) and displacement per kW; with A1, required displacement (m³/h).
-A3. **Carnot / second-law efficiency** — ideal Carnot COP from the
-    evaporator/condenser temperatures (`coilProfiles()` means for blends) and
-    exergetic efficiency COP/COP_Carnot.
 A4. **Cycle sensitivity sweep** — vary evaporator or condensing T from X to
     Y in N steps; plot COP (and discharge T) vs the swept variable. Loops
     `computeVCRCStates`; skips out-of-range points with a friendly note.
@@ -108,7 +104,7 @@ A9. **Two-stage / cascade cycle builder** — intercooler pressure
     `cycle.js` rework. Last because it depends on A8-style multi-state
     rendering.
 
-Suggested order: A1–A3 (small, shared UI) → B3–B6 →
+Suggested order: B3–B6 →
 A4–A6 → A7 → B7 → A8 → A9.
 
 ## Working notes for contributors

@@ -62,7 +62,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260922a">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260923a">
 </head>
 <body>
 
@@ -448,6 +448,29 @@
           </div>
         </div>
 
+        <div class="adv-tool">
+          <div class="section-divider" style="color:var(--accent3)">System Capacity</div>
+          <p class="adv-note">Optional cooling capacity. Scales the per-kg cycle to refrigerant mass flow, compressor power, heat rejection and compressor displacement — the cycle itself is unchanged.</p>
+          <div class="form-row">
+            <label for="capacity">Cooling capacity</label>
+            <div class="input-group">
+              <input type="number" id="capacity" step="any" min="0" placeholder="e.g. 10">
+              <select id="capacity-unit" class="input-unit input-unit-select" aria-label="Capacity unit">
+                <option value="kW">kW</option>
+                <option value="TR">TR</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="adv-tool">
+          <div class="section-divider" style="color:var(--accent)">Cycle Metrics</div>
+          <p class="adv-note">Volumetric capacity (suction gas) and Carnot / second-law efficiency between the mean evaporating and condensing temperatures. Displacement assumes 100 % volumetric efficiency.</p>
+          <div id="adv-results" class="table-wrap">
+            <p class="adv-note adv-empty">Calculate a cycle to see these metrics.</p>
+          </div>
+        </div>
+
       </div>
     </details>
 
@@ -475,6 +498,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260922b"></script>
+  <script type="module" src="./assets/js/app.js?v=20260923a"></script>
 </body>
 </html>

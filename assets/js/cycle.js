@@ -131,6 +131,45 @@ export async function coilProfiles(backend, states, inputs = {}) {
 }
 
 /**
+ * Advanced Tools metrics derived from a computed cycle (they never alter it).
+ * - Volumetric: cooling per m³ of suction gas q_vol = ρ1·q_evap, and the
+ *   swept volume per kW of cooling 3600/q_vol (100 % volumetric efficiency).
+ * - Carnot: reversible COPs between the refrigerant's mean evaporating and
+ *   condensing temperatures (coil means — for glide blends the arithmetic
+ *   mean across each coil); second-law efficiency η_II = COP / COP_Carnot.
+ * - Capacity (optional, kW of cooling): mass flow Q/q_evap, compressor power,
+ *   condenser heat rejection and required displacement.
+ * @param {object[]} states  — [state1, state2, state3, state4]
+ * @param {object}   metrics — analyzeVCRC() result
+ * @param {object}   coils   — coilProfiles() result
+ * @param {number|null} [capacity_kW]
+ */
+export function advancedMetrics(states, metrics, coils, capacity_kW = null) {
+  const rho1 = states[0].rho;
+  const q_vol = rho1 * metrics.Q_evap;
+  const T_L = coils.evap.T_mean_C + 273.15;
+  const T_H = coils.cond.T_mean_C + 273.15;
+  const COP_carnot_c = T_L / (T_H - T_L);
+  const COP_carnot_h = T_H / (T_H - T_L);
+  let capacity = null;
+  if (capacity_kW > 0) {
+    const m_dot = capacity_kW / metrics.Q_evap;
+    capacity = {
+      Q_evap_kW: capacity_kW, m_dot_kg_s: m_dot,
+      W_kW: m_dot * metrics.W_comp, Q_cond_kW: m_dot * metrics.Q_cond,
+      V_disp_m3_h: m_dot / rho1 * 3600,
+    };
+  }
+  return {
+    q_vol_kJ_m3: q_vol, disp_spec_m3_h_kW: 3600 / q_vol,
+    T_L_C: T_L - 273.15, T_H_C: T_H - 273.15,
+    COP_carnot_c, COP_carnot_h,
+    eta_II_c: metrics.COP_c / COP_carnot_c, eta_II_h: metrics.COP_h / COP_carnot_h,
+    capacity,
+  };
+}
+
+/**
  * Compute cycle performance from 4 state objects.
  * @param {object[]} states  — [state1, state2, state3, state4]
  */

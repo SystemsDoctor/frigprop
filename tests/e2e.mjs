@@ -30,7 +30,7 @@ globalThis.fetch = async (url) => {
 };
 
 const backend = (await import(path.join(ROOT, 'assets/js/tables.js'))).default;
-const { computeVCRCStates, analyzeVCRC, coilProfiles } = await import(path.join(ROOT, 'assets/js/cycle.js'));
+const { computeVCRCStates, analyzeVCRC, coilProfiles, advancedMetrics } = await import(path.join(ROOT, 'assets/js/cycle.js'));
 const truth = JSON.parse(await readFile(path.join(ROOT, 'tests/truth.json'), 'utf8'));
 
 let pass = 0;
@@ -92,6 +92,19 @@ for (const c of truth.cycles) {
       diff(errs, 'Tdew_evap', coil.evap.T_dew_C, w.T_dew_evap, TOL.T);
       diff(errs, 'Tdew_cond', coil.cond.T_dew_C, w.T_dew_cond, TOL.T);
       diff(errs, 'Tbub_cond', coil.cond.T_bub_C, w.T_bub_cond, TOL.T);
+      // Advanced Tools metrics at a 10 kW capacity (truth derived from the
+      // CoolProp states; Carnot between the true coil mean temperatures)
+      if (w.rho1 !== undefined) {
+        const adv = advancedMetrics(states, m, coil, 10);
+        const TL = (w.T4 + w.T_dew_evap) / 2 + 273.15;
+        const TH = (w.T_dew_cond + w.T_bub_cond) / 2 + 273.15;
+        diff(errs, 'q_vol', adv.q_vol_kJ_m3, w.rho1 * w.Qe, TOL.COP_rel, true);
+        diff(errs, 'COP_carnot', adv.COP_carnot_c, TL / (TH - TL), TOL.COP_rel, true);
+        diff(errs, 'eta_II', adv.eta_II_c, w.COP * (TH - TL) / TL, TOL.COP_rel, true);
+        diff(errs, 'm_dot', adv.capacity.m_dot_kg_s, 10 / w.Qe, TOL.COP_rel, true);
+        diff(errs, 'W_kW', adv.capacity.W_kW, 10 * w.W / w.Qe, TOL.COP_rel, true);
+        diff(errs, 'V_disp', adv.capacity.V_disp_m3_h, 36000 / (w.Qe * w.rho1), TOL.COP_rel, true);
+      }
     }
     check(label, errs);
   } catch (e) {

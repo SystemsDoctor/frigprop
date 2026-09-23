@@ -29,6 +29,12 @@ no build step.
   - **Side-by-side comparison** — run the same cycle on a second
     refrigerant: overlaid saturation domes and cycles in distinct colors,
     metrics table.
+  - **Cycle metrics** — volumetric cooling capacity and specific
+    displacement, Carnot COP between the mean evaporating/condensing
+    temperatures, and second-law efficiency (for both fluids when comparing).
+  - **System capacity** — optional cooling capacity (kW or TR) scales the
+    cycle to refrigerant mass flow, compressor power, condenser heat
+    rejection and compressor displacement.
 - **T-s and P-h diagrams** — saturation dome, cycle overlay with the true
   constant-h expansion curve, lookup-state marker; pan/zoom with recenter,
   PNG download.
