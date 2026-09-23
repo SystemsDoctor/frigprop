@@ -37,9 +37,15 @@ chk("4.1868 kJ/kgK = 1 Btu/lb°R", units.toDisplay(4.1868, "s"), 1);
 chk("16.0185 kg/m³ = 1 lb/ft³", units.toDisplay(16.018463, "rho"), 1);
 chk("1 m³/kg = 16.0185 ft³/lb", units.toDisplay(1, "v"), 16.018463);
 chk("quality passthrough",    units.toDisplay(0.42, "x"), 0.42);
+// system-scale kinds (Advanced Tools)
+chk("3.516853 kW = 1 TR = 12000 Btu/h", units.toDisplay(3.516853, "power"), 12000, 0.01);
+chk("1 kg/s = 132.277 lb/min", units.toDisplay(1, "mdot"), 132.2774, 1e-3);
+chk("1.699011 m³/h = 1 CFM", units.toDisplay(1.699011, "vflow"), 1, 1e-5);
+chk("37.25895 kJ/m³ = 1 Btu/ft³", units.toDisplay(37.25895, "vcc"), 1, 1e-6);
+chk("1 m³/h per kW = 2.06994 CFM/ton", units.toDisplay(1, "vspec"), 0.5885778 * 3.516853, 1e-5);
 
 // round trips
-for (const kind of ["T", "dT", "P", "h", "u", "s", "cp", "rho", "v"]) {
+for (const kind of ["T", "dT", "P", "h", "u", "s", "cp", "rho", "v", "power", "mdot", "vflow", "vcc", "vspec"]) {
   chk(`roundtrip ${kind}`, units.fromInput(units.toDisplay(123.456, kind), kind), 123.456, 1e-9);
 }
 

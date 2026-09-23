@@ -760,4 +760,12 @@ function _copyToClipboard(text, btn) {
   }
 }
 
+/** Offline support: cache the app + tables (served over https or localhost only). */
+function _registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  if (location.protocol !== "https:" && location.hostname !== "localhost") return;
+  navigator.serviceWorker.register("./sw.js").catch(() => { /* offline support is optional */ });
+}
+
 init();
+_registerServiceWorker();

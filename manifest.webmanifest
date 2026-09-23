@@ -1,0 +1,15 @@
+{
+  "name": "FrigProp — Refrigerant Properties & Cycle Analysis",
+  "short_name": "FrigProp",
+  "description": "Refrigerant property lookup and vapor-compression cycle analysis for 28 refrigerants, with T-s / P-h diagrams. Works offline after the first visit.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0e14",
+  "theme_color": "#0a0e14",
+  "icons": [
+    { "src": "./assets/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

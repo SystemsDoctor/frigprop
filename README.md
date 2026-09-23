@@ -13,6 +13,9 @@ no build step.
   ODP, regulatory status, typical applications, and replacement lineage.
   Filter chips (All, Natural, HFO, HFC, Legacy, GWP < 150, A1 only).
   Keyboard navigable (arrow keys + Enter).
+- **Offline / installable** — a service worker caches the app and every
+  refrigerant table (~1.6 MB) on the first visit, so everything works
+  offline afterwards; the web manifest lets browsers install it as an app.
 - **Property lookup** — full thermodynamic state (T, P, h, s, u, v, ρ, x, cp)
   from any supported input pair: T&P, P&h, P&s, T&quality, P&quality, plus
   saturation-row views at a given T or P (bubble/dew shown separately for

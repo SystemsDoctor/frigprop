@@ -44,6 +44,9 @@ params and recalled through the share-link path). The internal heat
 exchanger (A7) is the first option that alters the main cycle: states 1′/3′
 ride on the state array as `states.ihx`, Q = ε·min(vapor-side, liquid-side)
 enthalpy span, and the results/diagram carry the "Advanced: IHX ε …" marker.
+Offline/PWA (B7): `sw.js` (network-first same-origin, cache-first CDN;
+install caches the shell found via index.html's `?v=` import graph plus all
+85 table files) and `manifest.webmanifest` with 192/512/maskable icons.
 
 ## Design principle — two tiers
 
@@ -77,8 +80,8 @@ Each advanced calculation ships with CoolProp-truth cases in
 
 ## Basic improvements (main face)
 
-B7. **PWA/offline support** — manifest + service worker caching the static
-    assets and tables; no app-logic change.
+All planned basic improvements (B1–B7) have shipped — see Status above.
+New ones go here.
 
 ## Advanced operations (Advanced Tools section, closed by default)
 
@@ -91,7 +94,7 @@ A9. **Two-stage / cascade cycle builder** — intercooler pressure
     `cycle.js` rework. Last because it depends on A8-style multi-state
     rendering.
 
-Suggested order: B7 → A8 → A9.
+Suggested order: A8 → A9.
 
 ## Working notes for contributors
 

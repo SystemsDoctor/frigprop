@@ -17,6 +17,9 @@ Roadmap: `PLAN.md`. Data formats: `.claude/docs/data-schemas.md`.
   - `ui.js` — pure DOM rendering, no thermodynamics.
   - `chart.js` — T-s / P-h diagrams only (pure rendering, no thermodynamics).
   - `app.js` — thin controller wiring the above.
+  - `sw.js` (repo root) — offline cache. Discovers the app shell from
+    `index.html` and the `?v=` import graph, so it needs no edits on normal
+    releases; bump its `CACHE` name only when the caching scheme changes.
 - `tables/*.json` are **generated artifacts** — never hand-edit. Regenerate with
   `pip install coolprop orjson numpy && python3 scripts/generate_tables.py [FLUID...]`.
 - Units everywhere: T °C, P kPa, h/u kJ/kg, s/cp kJ/kg·K, ρ kg/m³. Convert at
