@@ -170,6 +170,77 @@ export function advancedMetrics(states, metrics, coils, capacity_kW = null) {
 }
 
 // ---------------------------------------------------------------------------
+// Advanced Tools — sensitivity sweep, superheated vapor table
+// ---------------------------------------------------------------------------
+
+/**
+ * Sensitivity sweep: the cycle re-run with the evaporating ("T1") or
+ * condensing ("T3") saturation temperature set to each value. Superheat and
+ * subcooling are held as ΔT (pressure-specified ones are converted to their
+ * ΔT first), η is held. Points the tables or the cycle reject carry `error`.
+ * @param {object}     backend  — on the fluid to sweep
+ * @param {object}     inputs   — computeVCRCStates inputs of the base cycle
+ * @param {"T1"|"T3"}  variable
+ * @param {number[]}   values   — °C
+ * @returns {Promise<{value: number, metrics: object|null, error: string|null}[]>}
+ */
+export async function sweepCycle(backend, inputs, variable, values) {
+  const base = { ...inputs };
+  if (base.superheat && base.sh_by === "P") {
+    const sat = await backend.getSatProps("P", base.P_evap_kPa);
+    Object.assign(base, { sh_by: "dT", dT_sh_K: base.T1_C - sat.T_dew_C, T1_C: sat.T_dew_C });
+  }
+  if (base.subcool && base.sc_by === "P") {
+    const sat = await backend.getSatProps("P", base.P_cond_kPa);
+    Object.assign(base, { sc_by: "dT", dT_sc_K: sat.T_bubble_C - base.T3_C, T3_C: sat.T_bubble_C });
+  }
+  const out = [];
+  for (const value of values) {
+    const inp = { ...base, [variable === "T1" ? "T1_C" : "T3_C"]: value };
+    try {
+      if (inp.T3_C <= inp.T1_C) {
+        throw new Error(`condensing T ${inp.T3_C.toFixed(1)} °C must exceed evaporating T ${inp.T1_C.toFixed(1)} °C`);
+      }
+      out.push({ value, metrics: analyzeVCRC(await computeVCRCStates(backend, inp)), error: null });
+    } catch (err) {
+      out.push({ value, metrics: null, error: err.message });
+    }
+  }
+  return out;
+}
+
+/**
+ * Superheated vapor property grid on a regular (T, P) lattice. A cell is
+ * null where T is not above the dew point at that P, or beyond table cover.
+ * @param {object}   backend       — on the fluid to tabulate
+ * @param {number[]} pressures_kPa — columns
+ * @param {number[]} temps_C       — rows
+ * @returns {Promise<{columns: {P_kPa: number, T_dew_C: number|null}[],
+ *                    rows: {T_C: number, cells: (object|null)[]}[]}>}
+ */
+export async function superheatTable(backend, pressures_kPa, temps_C) {
+  const columns = [];
+  for (const P of pressures_kPa) {
+    let T_dew_C = null;
+    try { T_dew_C = (await backend.getSatProps("P", P)).T_dew_C; } catch (_) { /* off the dome */ }
+    columns.push({ P_kPa: P, T_dew_C });
+  }
+  const rows = [];
+  for (const T of temps_C) {
+    const cells = [];
+    for (const c of columns) {
+      let st = null;
+      if (c.T_dew_C !== null && T > c.T_dew_C + 0.01) {
+        try { st = await backend.getProps("TP", T, c.P_kPa); } catch (_) { /* beyond coverage */ }
+      }
+      cells.push(st);
+    }
+    rows.push({ T_C: T, cells });
+  }
+  return { columns, rows };
+}
+
+// ---------------------------------------------------------------------------
 // Diagram support — iso-lines and diagram-point inversion
 // ---------------------------------------------------------------------------
 

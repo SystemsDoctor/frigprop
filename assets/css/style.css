@@ -23,6 +23,9 @@
   --gap:         14px;
   --radius:      10px;
   --radius-sm:   5px;
+  /* chart series (validated on --surface: in the dark L band, CVD-separable) */
+  --series-1:    #e0551f;
+  --series-2:    #14a89a;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1187,6 +1190,65 @@ nav {
 }
 
 .adv-empty { font-style: italic; }
+
+.adv-tool .form-row + .form-row { margin-top: 8px; }
+.adv-range { display: flex; flex-wrap: wrap; gap: 6px; }
+.adv-range .input-group input[type="number"] { width: 72px; }
+.adv-wide input[type="text"] {
+  background: rgba(0,0,0,.4);
+  border: none;
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  padding: 7px 8px;
+  width: 220px;
+  outline: none;
+}
+.adv-actions { display: flex; gap: 6px; margin: 10px 0 6px; }
+.adv-tool .alert-box { margin: 6px 0; }
+
+/* Sweep charts — inline SVG, single y-axis each */
+.sweep-charts { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0; }
+.viz-box { flex: 1 1 260px; min-width: 0; position: relative; }
+.viz-box svg { width: 100%; height: auto; display: block; }
+.viz-title { font-size: 11px; color: var(--text); margin-bottom: 2px; }
+.viz-grid { stroke: var(--border); stroke-width: 1; }
+.viz-tick, .viz-axis, .viz-lbl { font-family: var(--mono); font-size: 9px; fill: var(--text-dim); }
+.viz-lbl { fill: var(--text); }
+.viz-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.viz-dot { stroke: var(--surface); stroke-width: 1.5; }
+.viz-cross { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 2 2; }
+.viz-hit { fill: transparent; cursor: crosshair; }
+.viz-tip {
+  position: absolute;
+  top: 24px;
+  background: rgba(11,17,26,0.96);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.viz-na { color: var(--text-dim); }
+
+.sht-table td, .sht-table th { white-space: nowrap; }
+.sht-table caption { text-align: left; caption-side: top; }
+
+/* Recent cycles */
+.hist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,.025);
+  font-size: 11.5px;
+}
+.hist-label { flex: 1; min-width: 0; color: var(--text); }
+.hist-cop { font-family: var(--mono); color: var(--accent); white-space: nowrap; }
+.hist-pin { padding: 2px 7px; }
 
 .adv-subhead {
   text-align: left !important;

@@ -36,7 +36,11 @@ plugin), and a click on the plot fills and runs Property Lookup (P-h: PH;
 T-s: `lookupFromTS()` → TQ or TP with P solved by bisection). The gallery
 has filter chips (family partition + GWP < 150 + A1 only), and the
 Properties pane copies the full saturation table as CSV (bubble/dew P for
-zeotropes).
+zeotropes). Advanced Tools also hosts a sensitivity sweep (`sweepCycle()`,
+inline-SVG charts in `ui.js` with series colors `--series-1/2` validated for
+the dark surface), a superheated vapor table (`superheatTable()`) and a
+recent/pinned cycle list (sessionStorage / localStorage, stored as share
+params and recalled through the share-link path).
 
 ## Design principle — two tiers
 
@@ -75,13 +79,6 @@ B7. **PWA/offline support** — manifest + service worker caching the static
 
 ## Advanced operations (Advanced Tools section, closed by default)
 
-A4. **Cycle sensitivity sweep** — vary evaporator or condensing T from X to
-    Y in N steps; plot COP (and discharge T) vs the swept variable. Loops
-    `computeVCRCStates`; skips out-of-range points with a friendly note.
-A5. **History / pinned cycles** — last N computed cycles (`sessionStorage`)
-    with one-click recall, for before/after comparisons.
-A6. **Superheated property table generator** — regular (T, P) grid for the
-    selected fluid, exported as CSV/HTML for hand checks and handouts.
 A7. **Internal heat exchanger (IHX)** — effectiveness input coupling
     suction superheat to liquid subcooling. When enabled, the face's
     diagram and results show the IHX cycle, marked per the
@@ -95,7 +92,7 @@ A9. **Two-stage / cascade cycle builder** — intercooler pressure
     `cycle.js` rework. Last because it depends on A8-style multi-state
     rendering.
 
-Suggested order: A4–A6 → A7 → B7 → A8 → A9.
+Suggested order: A7 → B7 → A8 → A9.
 
 ## Working notes for contributors
 

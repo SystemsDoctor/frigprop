@@ -37,6 +37,13 @@ no build step.
   - **System capacity** — optional cooling capacity (kW or TR) scales the
     cycle to refrigerant mass flow, compressor power, condenser heat
     rejection and compressor displacement.
+  - **Sensitivity sweep** — re-run the cycle over a range of evaporating or
+    condensing temperatures; COP and discharge-temperature charts (both
+    fluids when comparing), a table view and CSV.
+  - **Superheated vapor table** — h, s, ρ, u or cp on a regular (T, P)
+    grid for the selected refrigerant; CSV of all properties.
+  - **Recent cycles** — the cycles calculated in this tab, with pinning
+    (kept across reloads) and one-click recall.
 - **T-s and P-h diagrams** — saturation dome, cycle overlay with the true
   constant-h expansion curve, lookup-state marker; faint labeled isobars
   (T-s) / isotherms (P-h) at round values; click any point to look it up in

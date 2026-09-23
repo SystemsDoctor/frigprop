@@ -62,7 +62,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260923c">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260923d">
 </head>
 <body>
 
@@ -485,6 +485,71 @@
           </div>
         </div>
 
+        <div class="adv-tool">
+          <div class="section-divider" style="color:var(--accent2)">Sensitivity Sweep</div>
+          <p class="adv-note">Re-runs the last calculated cycle across a range of evaporating or condensing temperatures, holding superheat, subcooling and η. Doesn't change the main cycle.</p>
+          <div class="form-row">
+            <label for="sweep-var">Vary</label>
+            <select id="sweep-var" class="lookup-select">
+              <option value="T1">Evaporator temperature</option>
+              <option value="T3">Condensing temperature</option>
+            </select>
+          </div>
+          <div class="form-row adv-range-row">
+            <label for="sweep-from">From / to / points</label>
+            <div class="adv-range">
+              <div class="input-group"><input type="number" id="sweep-from" step="any" aria-label="Sweep start"><span class="input-unit" data-kind="T">°C</span></div>
+              <div class="input-group"><input type="number" id="sweep-to" step="any" aria-label="Sweep end"><span class="input-unit" data-kind="T">°C</span></div>
+              <div class="input-group"><input type="number" id="sweep-n" step="1" min="2" max="41" value="11" aria-label="Number of points"></div>
+            </div>
+          </div>
+          <div class="adv-actions">
+            <button id="sweep-btn" class="chart-btn" disabled>Run sweep</button>
+            <button id="sweep-csv-btn" class="chart-btn hidden">⧉ Copy CSV</button>
+          </div>
+          <div id="sweep-error" class="alert-box alert-error hidden"></div>
+          <div id="sweep-out"></div>
+        </div>
+
+        <div class="adv-tool">
+          <div class="section-divider" style="color:var(--accent3)">Superheated Vapor Table</div>
+          <p class="adv-note">Property grid on a regular (T, P) lattice for the selected refrigerant — for hand checks and handouts. Cells at or below the dew point are blank.</p>
+          <div class="form-row">
+            <label for="sht-p">Pressures</label>
+            <div class="input-group adv-wide"><input type="text" id="sht-p" inputmode="decimal" placeholder="e.g. 100, 200, 500" aria-describedby="sht-p-unit"><span class="input-unit" id="sht-p-unit" data-kind="P">kPa</span></div>
+          </div>
+          <div class="form-row adv-range-row">
+            <label for="sht-from">T from / to / step</label>
+            <div class="adv-range">
+              <div class="input-group"><input type="number" id="sht-from" step="any" aria-label="First temperature"><span class="input-unit" data-kind="T">°C</span></div>
+              <div class="input-group"><input type="number" id="sht-to" step="any" aria-label="Last temperature"><span class="input-unit" data-kind="T">°C</span></div>
+              <div class="input-group"><input type="number" id="sht-step" step="any" min="0" aria-label="Temperature step"><span class="input-unit" data-kind="dT">K</span></div>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="sht-prop">Show</label>
+            <select id="sht-prop" class="lookup-select">
+              <option value="h">Enthalpy h</option>
+              <option value="s">Entropy s</option>
+              <option value="rho">Density ρ</option>
+              <option value="u">Internal energy u</option>
+              <option value="cp">Specific heat cp</option>
+            </select>
+          </div>
+          <div class="adv-actions">
+            <button id="sht-btn" class="chart-btn" disabled>Generate table</button>
+            <button id="sht-csv-btn" class="chart-btn hidden">⧉ Copy CSV (all properties)</button>
+          </div>
+          <div id="sht-error" class="alert-box alert-error hidden"></div>
+          <div id="sht-out" class="table-wrap"></div>
+        </div>
+
+        <div class="adv-tool">
+          <div class="section-divider" style="color:var(--accent)">Recent Cycles</div>
+          <p class="adv-note">Cycles calculated in this tab (most recent first); ☆ pins one so it survives reloads. Recall re-runs it on the main cycle.</p>
+          <div id="history-out"><p class="adv-note adv-empty">No cycles yet.</p></div>
+        </div>
+
       </div>
     </details>
 
@@ -512,6 +577,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260923d"></script>
+  <script type="module" src="./assets/js/app.js?v=20260923e"></script>
 </body>
 </html>

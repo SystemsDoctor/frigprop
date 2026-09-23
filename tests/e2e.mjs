@@ -30,7 +30,8 @@ globalThis.fetch = async (url) => {
 };
 
 const backend = (await import(path.join(ROOT, 'assets/js/tables.js'))).default;
-const { computeVCRCStates, analyzeVCRC, coilProfiles, advancedMetrics, lookupFromTS } = await import(path.join(ROOT, 'assets/js/cycle.js'));
+const { computeVCRCStates, analyzeVCRC, coilProfiles, advancedMetrics, lookupFromTS,
+  sweepCycle, superheatTable } = await import(path.join(ROOT, 'assets/js/cycle.js'));
 const truth = JSON.parse(await readFile(path.join(ROOT, 'tests/truth.json'), 'utf8'));
 
 let pass = 0;
@@ -155,6 +156,64 @@ for (const c of truth.props) {
       failures.push(`${label}: threw ${e.message}`);
     }
   } catch (_) { /* case outside sat-by-P coverage — covered by props section */ }
+}
+
+// --- Sensitivity sweeps: sweep points reproduce the truth cycles ------------
+
+// plain saturated cycles, grouped so one sweep covers several truth cases
+const plain = truth.cycles.filter(c => !c.sh && !c.sc && !c.eta && !c.sh_by && !c.sc_by);
+for (const [variable, fixed, swept] of [['T1', 'Tc', 'Te'], ['T3', 'Te', 'Tc']]) {
+  const groups = new Map();
+  for (const c of plain) {
+    const k = `${c.fluid}|${c[fixed]}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(c);
+  }
+  for (const [k, cases] of groups) {
+    if (cases.length < 2) continue;
+    const c0 = cases[0];
+    const label = `sweep ${variable} ${k.replace('|', ' ' + fixed + '=')}`;
+    try {
+      await backend.init(c0.fluid);
+      const base = { T1_C: c0.Te, T3_C: c0.Tc, superheat: false, subcool: false, eta_isen: 1 };
+      const pts = await sweepCycle(backend, base, variable, cases.map(c => c[swept]));
+      const errs = [];
+      pts.forEach((p, i) => {
+        if (p.error) errs.push(`${swept}=${p.value} threw ${p.error}`);
+        else diff(errs, `COP@${p.value}`, p.metrics.COP_c, cases[i].want.COP, TOL.COP_rel, true);
+      });
+      check(label, errs);
+    } catch (e) {
+      failures.push(`${label}: threw ${e.message}`);
+    }
+  }
+}
+
+// --- Superheated vapor table cells vs CoolProp ------------------------------
+
+for (const c of truth.props) {
+  if (c.pair !== 'TP') continue;
+  const w = c.want;
+  try {
+    await backend.init(c.fluid);
+    const sat = await backend.getSatProps('P', w.P_kPa);
+    if (w.T_C <= sat.T_dew_C + 0.5) continue;  // superheated vapor only
+  } catch (_) { continue; }
+  const label = `sh-table ${c.fluid} (T=${w.T_C.toFixed(2)}, P=${w.P_kPa.toFixed(1)})`;
+  try {
+    const tbl = await superheatTable(backend, [w.P_kPa], [w.T_C]);
+    const st = tbl.rows[0].cells[0];
+    const errs = [];
+    if (!st) errs.push('cell empty');
+    else {
+      diff(errs, 'h', st.h, w.h, TOL.h);
+      diff(errs, 's', st.s, w.s, TOL.s);
+      diff(errs, 'rho', st.rho, w.rho, TOL.rho_rel, true);
+    }
+    check(label, errs);
+  } catch (e) {
+    failures.push(`${label}: threw ${e.message}`);
+  }
 }
 
 // --- Report ------------------------------------------------------------------

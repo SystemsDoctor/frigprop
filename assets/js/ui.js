@@ -435,9 +435,10 @@ export function getCapacityUnit() {
   return $("capacity-unit").value;
 }
 
-/** Restore a capacity (kW) shown in the given unit ("kW" | "TR"). */
+/** Restore a capacity (kW) shown in the given unit ("kW" | "TR"); null clears it. */
 export function setCapacity(kW, unit) {
   $("capacity-unit").value = unit === "TR" ? "TR" : "kW";
+  if (!(kW > 0)) { $("capacity").value = ""; return; }
   const v = unit === "TR" ? kW / KW_PER_TR : kW;
   $("capacity").value = +v.toFixed(4);
 }
@@ -509,6 +510,293 @@ export function renderAdvancedResults(primary, comparison) {
       <thead><tr><th style="text-align:left">Metric</th>${cols.map(b => `<th>${b.key}</th>`).join("")}</tr></thead>
       <tbody>${ADV_ROWS.map(r => row(r, a => a)).join("")}${capRows}</tbody>
     </table>`;
+}
+
+// --- Tool inputs (display units in, SI out) --------------------------------
+
+/** Show (or clear, with null) an Advanced Tools error box. */
+export function showToolError(id, msg) {
+  $(id).textContent = msg || "";
+  $(id).classList.toggle("hidden", !msg);
+}
+
+/** Sweep form: { variable: "T1"|"T3", from_C, to_C, n }. */
+export function getSweepInputs() {
+  return {
+    variable: $("sweep-var").value,
+    from_C: units.fromInput(parseFloat($("sweep-from").value), "T"),
+    to_C:   units.fromInput(parseFloat($("sweep-to").value), "T"),
+    n:      parseInt($("sweep-n").value, 10),
+  };
+}
+
+/** Prefill the sweep range (SI °C, shown rounded in display units). */
+export function setSweepRange(from_C, to_C) {
+  $("sweep-from").value = Math.round(units.toDisplay(from_C, "T"));
+  $("sweep-to").value   = Math.round(units.toDisplay(to_C, "T"));
+}
+
+/** Superheat-table form: { pressures_kPa[], from_C, to_C, step_K, prop }; bad pressure entries → NaN. */
+export function getSuperheatInputs() {
+  return {
+    pressures_kPa: $("sht-p").value.split(/[,\s;]+/).filter(Boolean)
+      .map(v => units.fromInput(parseFloat(v), "P")),
+    from_C: units.fromInput(parseFloat($("sht-from").value), "T"),
+    to_C:   units.fromInput(parseFloat($("sht-to").value), "T"),
+    step_K: units.fromInput(parseFloat($("sht-step").value), "dT"),
+    prop:   $("sht-prop").value,
+  };
+}
+
+/** Prefill the superheat-table form; values are already round display values. */
+export function setSuperheatDefaults(pressuresDisp, fromDisp, toDisp, stepDisp) {
+  $("sht-p").value = pressuresDisp.join(", ");
+  $("sht-from").value = fromDisp;
+  $("sht-to").value = toDisp;
+  $("sht-step").value = stepDisp;
+}
+
+// --- Sensitivity sweep --------------------------------------------------------
+
+// Series colors (validated for the dark surface: OKLCH L band, CVD ΔE 14.5);
+// the comparison series is also dashed and direct-labeled.
+const SERIES = [
+  { color: "var(--series-1)", dash: "" },
+  { color: "var(--series-2)", dash: "5 3" },
+];
+
+/** Round tick values spanning [lo, hi] (about n of them). */
+function _niceTicks(lo, hi, n = 4) {
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const raw = (hi - lo) / n;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(st => st >= raw);
+  const ticks = [];
+  for (let v = Math.floor(lo / step) * step; v <= hi + step * 1e-9; v += step) ticks.push(+v.toPrecision(10));
+  if (ticks[ticks.length - 1] < hi) ticks.push(+(ticks[ticks.length - 1] + step).toPrecision(10));
+  return ticks;
+}
+
+/**
+ * Small single-axis SVG line chart with a hover crosshair + tooltip listing
+ * every series at the nearest x. Values are display-unit numbers; gaps
+ * (null y) break the line.
+ */
+function _lineChart(box, { title, xText, yText, xs, series, yDec }) {
+  const W = 320, H = 180, m = { l: 44, r: 14, t: 22, b: 30 };
+  const ys = series.flatMap(sr => sr.ys).filter(v => v !== null);
+  const yt = _niceTicks(Math.min(...ys), Math.max(...ys));
+  const xt = _niceTicks(Math.min(...xs), Math.max(...xs));
+  const [x0, x1, y0, y1] = [xt[0], xt[xt.length - 1], yt[0], yt[yt.length - 1]];
+  const X = v => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r);
+  const Y = v => H - m.b - (v - y0) / (y1 - y0) * (H - m.t - m.b);
+  const grid = yt.map(v => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" class="viz-grid"/>
+    <text x="${m.l - 5}" y="${Y(v) + 3}" text-anchor="end" class="viz-tick">${+v.toFixed(yDec)}</text>`).join("") +
+    xt.map(v => `<text x="${X(v)}" y="${H - m.b + 13}" text-anchor="middle" class="viz-tick">${+v.toFixed(1)}</text>`).join("");
+  // last defined point per series; with two series the upper one is labeled
+  // above its end, the lower one below, so direct labels never collide
+  const lastIdx = series.map(sr => sr.ys.map((v, j) => v === null ? -1 : j).filter(j => j >= 0).pop());
+  const endY = series.map((sr, i) => lastIdx[i] === undefined ? 0 : sr.ys[lastIdx[i]]);
+  const lines = series.map((sr, i) => {
+    let d = "", pen = false;
+    sr.ys.forEach((v, j) => {
+      if (v === null) { pen = false; return; }
+      d += `${pen ? "L" : "M"}${X(xs[j]).toFixed(1)},${Y(v).toFixed(1)}`;
+      pen = true;
+    });
+    const dots = sr.ys.map((v, j) => v === null ? "" :
+      `<circle cx="${X(xs[j])}" cy="${Y(v)}" r="3.5" class="viz-dot" style="fill:${SERIES[i].color}"/>`).join("");
+    // direct label at the last defined point (text in ink, not series color)
+    const lastJ = lastIdx[i];
+    const upper = endY[i] >= Math.max(...endY.filter((_, k) => k !== i));
+    const lbl = series.length > 1 && lastJ !== undefined
+      ? `<text x="${X(xs[lastJ]) - 4}" y="${Y(sr.ys[lastJ]) + (upper ? -8 : 14)}" text-anchor="end" class="viz-lbl"></text>` : "";
+    return `<path d="${d}" class="viz-line" style="stroke:${SERIES[i].color}" stroke-dasharray="${SERIES[i].dash}"/>${dots}${lbl}`;
+  }).join("");
+  box.innerHTML = `
+    <div class="viz-title"></div>
+    <svg viewBox="0 0 ${W} ${H}" role="img">
+      ${grid}
+      <text x="${(m.l + W - m.r) / 2}" y="${H - 3}" text-anchor="middle" class="viz-axis"></text>
+      <line class="viz-cross" y1="${m.t}" y2="${H - m.b}" visibility="hidden"/>
+      ${lines}
+      <rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" class="viz-hit"/>
+    </svg>
+    <div class="viz-tip hidden"></div>`;
+  // text via textContent — labels never pass through innerHTML
+  box.querySelector(".viz-title").textContent = yText ? `${title} (${yText})` : title;
+  box.querySelector(".viz-axis").textContent = xText;
+  box.querySelector("svg").setAttribute("aria-label", `${title} versus ${xText}`);
+  box.querySelectorAll(".viz-lbl").forEach((t, i) => { t.textContent = series[i].name; });
+
+  const svg = box.querySelector("svg"), cross = box.querySelector(".viz-cross"), tip = box.querySelector(".viz-tip");
+  box.querySelector(".viz-hit").addEventListener("pointermove", e => {
+    const r = svg.getBoundingClientRect();
+    const vx = (e.clientX - r.left) / r.width * W;
+    let j = 0;
+    xs.forEach((x, k) => { if (Math.abs(X(x) - vx) < Math.abs(X(xs[j]) - vx)) j = k; });
+    cross.setAttribute("x1", X(xs[j])); cross.setAttribute("x2", X(xs[j]));
+    cross.setAttribute("visibility", "visible");
+    tip.textContent = "";
+    const head = document.createElement("div");
+    head.textContent = `${xText} = ${+xs[j].toFixed(2)}`;
+    tip.appendChild(head);
+    series.forEach(sr => {
+      const row = document.createElement("div");
+      row.textContent = `${sr.name}: ${sr.ys[j] === null ? "—" : sr.ys[j].toFixed(yDec)}`;
+      tip.appendChild(row);
+    });
+    tip.classList.remove("hidden");
+    const left = X(xs[j]) / W * r.width;
+    tip.style.left = `${Math.min(left + 10, r.width - tip.offsetWidth - 4)}px`;
+  });
+  box.querySelector(".viz-hit").addEventListener("pointerleave", () => {
+    cross.setAttribute("visibility", "hidden");
+    tip.classList.add("hidden");
+  });
+}
+
+/**
+ * Render a sensitivity sweep: COP and discharge-T charts plus a table view.
+ * @param {{variable: "T1"|"T3", series: {key: string, pts: object[]}[]}|null} sweep
+ */
+export function renderSweep(sweep) {
+  const out = $("sweep-out");
+  $("sweep-csv-btn").classList.toggle("hidden", !sweep);
+  if (!sweep) { out.innerHTML = ""; return; }
+  const LT = units.label("T");
+  const xText = `${sweep.variable === "T1" ? "T evap" : "T cond"} (${LT})`;
+  const xs = sweep.series[0].pts.map(p => units.toDisplay(p.value, "T"));
+  const pick = f => sweep.series.map(sr => ({ name: sr.key, ys: sr.pts.map(p => p.metrics ? f(p.metrics) : null) }));
+  const skipped = sweep.series.reduce((n, sr) => n + sr.pts.filter(p => p.error).length, 0);
+  out.innerHTML = `
+    ${sweep.series.length > 1 ? `<div class="chart-legend">${sweep.series.map((sr, i) =>
+      `<span class="legend-item"><span class="legend-swatch" style="background:${SERIES[i].color}"></span><span class="lg"></span></span>`).join("")}</div>` : ""}
+    <div class="sweep-charts"><div class="viz-box"></div><div class="viz-box"></div></div>
+    ${skipped ? `<p class="adv-note">${skipped} point(s) outside the table range or cycle limits are left blank.</p>` : ""}
+    <div class="table-wrap"><table class="results-table" aria-label="Sweep results">
+      <thead><tr><th>${xText}</th>${sweep.series.map(sr => `<th class="k">COP<sub>c</sub></th><th class="k">T<sub>2</sub> (${LT})</th>`).join("")}</tr></thead>
+      <tbody>${xs.map((x, j) => `<tr><td>${fmt(x, 1)}</td>${sweep.series.map(sr => {
+        const p = sr.pts[j];
+        return p.metrics ? `<td>${fmt(p.metrics.COP_c, 3)}</td><td>${du(p.metrics.T_discharge_C, "T", 1)}</td>`
+                         : `<td class="viz-na">—</td><td class="viz-na">—</td>`;
+      }).join("")}</tr>`).join("")}</tbody>
+    </table></div>`;
+  out.querySelectorAll(".lg").forEach((el, i) => { el.textContent = sweep.series[i].key; });
+  // two fluids: prefix column headers with the fluid key
+  if (sweep.series.length > 1) {
+    out.querySelectorAll("th.k").forEach((th, i) => { th.prepend(`${sweep.series[i >> 1].key} `); });
+  }
+  const boxes = out.querySelectorAll(".viz-box");
+  _lineChart(boxes[0], { title: "COP cooling", yText: "", xText, xs, series: pick(m => m.COP_c), yDec: 2 });
+  _lineChart(boxes[1], { title: "Discharge T₂", yText: LT, xText, xs,
+                         series: pick(m => units.toDisplay(m.T_discharge_C, "T")), yDec: 1 });
+}
+
+/** Sweep as CSV (display units). */
+export function buildSweepCSV(sweep) {
+  const L = k => units.label(k);
+  const head = [`${sweep.variable === "T1" ? "T_evap" : "T_cond"} (${L("T")})`];
+  sweep.series.forEach(sr => head.push(`${sr.key} COP_c`, `${sr.key} COP_h`, `${sr.key} W_comp (${L("h")})`,
+                                       `${sr.key} Q_evap (${L("h")})`, `${sr.key} T2 (${L("T")})`, `${sr.key} P_ratio`));
+  const lines = [head.join(",")];
+  sweep.series[0].pts.forEach((p0, j) => {
+    const row = [du(p0.value, "T", 2)];
+    sweep.series.forEach(sr => {
+      const m = sr.pts[j].metrics;
+      row.push(...(m ? [fmt(m.COP_c, 4), fmt(m.COP_h, 4), du(m.W_comp, "h", 3), du(m.Q_evap, "h", 3),
+                        du(m.T_discharge_C, "T", 2), fmt(m.P_ratio, 3)] : ["", "", "", "", "", ""]));
+    });
+    lines.push(row.join(","));
+  });
+  return lines.join("\n") + "\n";
+}
+
+// --- Superheated vapor table --------------------------------------------------
+
+const SHT_PROPS = { h: ["h", "h", 2], s: ["s", "s", 4], rho: ["ρ", "rho", 3], u: ["u", "u", 2], cp: ["cp", "cp", 4] };
+
+/**
+ * Render the superheated vapor grid for one property (rows T, columns P).
+ * @param {{designation: string, tbl: object}|null} sht — superheatTable() result
+ * @param {string} prop — "h" | "s" | "rho" | "u" | "cp"
+ */
+export function renderSuperheatTable(sht, prop) {
+  const out = $("sht-out");
+  $("sht-csv-btn").classList.toggle("hidden", !sht);
+  if (!sht) { out.innerHTML = ""; return; }
+  const [sym, kind, dec] = SHT_PROPS[prop];
+  const { columns, rows } = sht.tbl;
+  out.innerHTML = `
+    <table class="results-table sht-table" aria-label="Superheated vapor ${sym}">
+      <caption class="adv-note"></caption>
+      <thead><tr><th>T (${units.label("T")})</th>${columns.map(c =>
+        `<th>${du(c.P_kPa, "P", 1)} ${units.label("P")}<br><span class="th-unit">T<sub>dew</sub> ${c.T_dew_C === null ? "—" : du(c.T_dew_C, "T", 1)}</span></th>`).join("")}</tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${du(r.T_C, "T", 1)}</td>${r.cells.map(st =>
+        st && st[kind] !== null && st[kind] !== undefined ? `<td>${du(st[kind], kind, dec)}</td>` : `<td class="viz-na">·</td>`).join("")}</tr>`).join("")}</tbody>
+    </table>`;
+  out.querySelector("caption").textContent = `${sht.designation} — superheated vapor ${sym} (${units.label(kind)})`;
+}
+
+/** Superheated vapor table as long-form CSV, all properties (display units). */
+export function buildSuperheatCSV(sht) {
+  const L = k => units.label(k);
+  const lines = [`Fluid,${sht.designation}`,
+    `P (${L("P")}),T_dew (${L("T")}),T (${L("T")}),h (${L("h")}),s (${L("s")}),rho (${L("rho")}),u (${L("u")}),cp (${L("cp")})`];
+  sht.tbl.columns.forEach((c, i) => {
+    sht.tbl.rows.forEach(r => {
+      const st = r.cells[i];
+      if (!st) return;
+      lines.push([du(c.P_kPa, "P", 3), du(c.T_dew_C, "T", 2), du(r.T_C, "T", 2), du(st.h, "h", 3),
+                  du(st.s, "s", 5), du(st.rho, "rho", 4), st.u === null ? "" : du(st.u, "u", 3),
+                  st.cp === null || st.cp === undefined ? "" : du(st.cp, "cp", 4)].join(","));
+    });
+  });
+  return lines.join("\n") + "\n";
+}
+
+// --- Recent cycles -------------------------------------------------------------
+
+/** One-line summary of a stored cycle entry in display units. */
+function _historyLabel(e) {
+  const i = e.inputs, LT = units.label("T");
+  const parts = [`${e.designation}${e.compare ? ` vs ${e.compare}` : ""}`,
+                 `${du(i.T1_C, "T", 1)} / ${du(i.T3_C, "T", 1)} ${LT}`];
+  if (i.superheat) parts.push(i.sh_by === "P" ? `SH @ ${du(i.P_evap_kPa, "P", 0)} ${units.label("P")}` : `SH ${du(i.dT_sh_K, "dT", 1)} ${units.label("dT")}`);
+  if (i.subcool) parts.push(i.sc_by === "P" ? `SC @ ${du(i.P_cond_kPa, "P", 0)} ${units.label("P")}` : `SC ${du(i.dT_sc_K, "dT", 1)} ${units.label("dT")}`);
+  if (i.eta_isen < 1) parts.push(`η ${Math.round(i.eta_isen * 100)} %`);
+  return parts.join(" · ");
+}
+
+/**
+ * Render pinned + recent cycles; buttons carry data-act (recall|pin|unpin),
+ * data-list (pinned|recent) and data-i for onHistoryAction.
+ */
+export function renderHistory(pinned, recent) {
+  const out = $("history-out");
+  if (!pinned.length && !recent.length) {
+    out.innerHTML = '<p class="adv-note adv-empty">No cycles yet.</p>';
+    return;
+  }
+  const row = (e, list, i) => `
+    <div class="hist-row">
+      <button class="chart-btn hist-pin" data-act="${list === "pinned" ? "unpin" : "pin"}" data-list="${list}" data-i="${i}"
+        title="${list === "pinned" ? "Unpin" : "Pin (keeps it across reloads)"}" aria-label="${list === "pinned" ? "Unpin" : "Pin"}">${list === "pinned" ? "★" : "☆"}</button>
+      <span class="hist-label"></span>
+      <span class="hist-cop">COP ${fmt(e.cop, 3)}</span>
+      <button class="chart-btn" data-act="recall" data-list="${list}" data-i="${i}">Recall</button>
+    </div>`;
+  out.innerHTML = pinned.map((e, i) => row(e, "pinned", i)).join("") + recent.map((e, i) => row(e, "recent", i)).join("");
+  const labels = out.querySelectorAll(".hist-label");
+  [...pinned, ...recent].forEach((e, k) => { labels[k].textContent = _historyLabel(e); });
+}
+
+/** Wire the history buttons: handler(act, list, index). */
+export function onHistoryAction(handler) {
+  $("history-out").addEventListener("click", e => {
+    const b = e.target.closest("button[data-act]");
+    if (b) handler(b.dataset.act, b.dataset.list, parseInt(b.dataset.i, 10));
+  });
 }
 
 /**
