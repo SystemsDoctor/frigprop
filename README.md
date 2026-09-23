@@ -16,7 +16,8 @@ no build step.
 - **Property lookup** — full thermodynamic state (T, P, h, s, u, v, ρ, x, cp)
   from any supported input pair: T&P, P&h, P&s, T&quality, P&quality, plus
   saturation-row views at a given T or P (bubble/dew shown separately for
-  zeotropic blends).
+  zeotropic blends). The Properties pane copies the whole saturation table
+  (T, P, h, s, ρ for liquid and vapor) as CSV.
 - **VCRC cycle analysis** — four-state cycle from evaporator and condensing
   temperatures, with optional superheat/subcooling (specified as ΔT from
   saturation or as a pressure) and compressor isentropic efficiency.

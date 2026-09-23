@@ -882,6 +882,38 @@ function _renderComparisonMetrics(primary, comparison) {
     </table>`;
 }
 
+/**
+ * Saturation table as CSV in the current display units. Zeotropes get
+ * separate bubble/dew pressures (h_f/s_f/ρ_f are bubble-side, h_g/s_g/ρ_g
+ * dew-side at each T); pure fluids and azeotropes a single P_sat.
+ * @param {string}  designation — e.g. "R-449A"
+ * @param {string}  reference   — h/s reference-state note
+ * @param {Array[]} rows        — sat.json rows (getSatRows)
+ */
+export function buildSatCSV(designation, reference, rows) {
+  const L = k => units.label(k);
+  const quote = v => /[",]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  // sat-table column order: T, P_sat, hf, hg, sf, sg, rhof, rhog, uf, ug, P_bub, P_dew
+  const glide = rows.some(r => Math.abs(r[10] - r[11]) > 1e-3 * r[10]);
+  const Tdec = units.getSystem() === "IP" ? 2 : 1;
+  const lines = [
+    `Fluid,${quote(designation)}`,
+    `h/s reference,${quote(reference || "")}`,
+    [`T (${L("T")})`, ...(glide ? [`P_bubble (${L("P")})`, `P_dew (${L("P")})`] : [`P_sat (${L("P")})`]),
+     `h_f (${L("h")})`, `h_g (${L("h")})`, `s_f (${L("s")})`, `s_g (${L("s")})`,
+     `rho_f (${L("rho")})`, `rho_g (${L("rho")})`].join(","),
+  ];
+  for (const r of rows) {
+    lines.push([
+      du(r[0], "T", Tdec),
+      ...(glide ? [du(r[10], "P", 3), du(r[11], "P", 3)] : [du(r[1], "P", 3)]),
+      du(r[2], "h", 3), du(r[3], "h", 3), du(r[4], "s", 5), du(r[5], "s", 5),
+      du(r[6], "rho", 4), du(r[7], "rho", 5),
+    ].join(","));
+  }
+  return lines.join("\n") + "\n";
+}
+
 /** Build a CSV export (current display units) of states + performance. */
 export function buildResultsCSV(primary, comparison) {
   const L = k => units.label(k);

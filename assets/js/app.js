@@ -10,14 +10,14 @@ import {
   setStatus, populateRefrigerantSelector, onRefrigerantChange,
   renderInfoPanel, wireInputControls, getInputs, applyInputs, setRangeHint,
   enableCalcButton, onCalcClick, showError, clearError,
-  renderResults, buildResultsCSV, showTranscritWarning, highlightRefCard,
+  renderResults, buildResultsCSV, buildSatCSV, showTranscritWarning, highlightRefCard,
   populateComparisonSelect, getComparisonFluid, onComparisonChange,
   wireAdvancedSection, openAdvancedSection, setAdvancedMarkers,
   getCapacityKW, getCapacityUnit, setCapacity, onCapacityChange, renderAdvancedResults,
   wireLookupControls, enableLookupButton, showLookupError, setLookupInputs,
   renderLookupState, renderLookupSat,
   refreshUnitLabels, refreshLookupFields, onUnitToggle,
-} from "./ui.js?v=20260923c";  // versioned: new exports must not meet a cached ui.js
+} from "./ui.js?v=20260923d";  // versioned: new exports must not meet a cached ui.js
 import {
   initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker, onDiagramPick,
 } from "./chart.js?v=20260923b";
@@ -87,6 +87,12 @@ async function init() {
     if (!last) return;
     _copyToClipboard(buildResultsCSV(last.primary, last.comparison), csvBtn);
   });
+  const satBtn = document.getElementById("sat-csv-btn");
+  satBtn.addEventListener("click", () => {
+    const rows = currentFluidKey && backend.getSatRows(currentFluidKey);
+    if (!rows || !currentInfo) return;
+    _copyToClipboard(buildSatCSV(currentInfo.ashrae_designation, currentInfo.reference_state, rows), satBtn);
+  });
   const linkBtn = document.getElementById("share-link-btn");
   if (linkBtn) linkBtn.addEventListener("click", () => {
     const url = _buildShareURL();
@@ -113,6 +119,7 @@ async function selectFluid(key) {
     renderInfoPanel(key, info, meta);
     setRangeHint(meta);
     highlightRefCard(key, info);
+    document.getElementById("sat-csv-btn").disabled = false;
     setStatus("ready", `Ready — ${key}`);
     enableCalcButton(true);
     enableLookupButton(true);

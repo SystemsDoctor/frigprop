@@ -34,7 +34,9 @@ Diagrams carry faint isobars (T-s) / isotherms (P-h) at display-unit round
 values (`isoLines()` in `cycle.js`, labels kept in view by a Chart.js
 plugin), and a click on the plot fills and runs Property Lookup (P-h: PH;
 T-s: `lookupFromTS()` → TQ or TP with P solved by bisection). The gallery
-has filter chips (family partition + GWP < 150 + A1 only).
+has filter chips (family partition + GWP < 150 + A1 only), and the
+Properties pane copies the full saturation table as CSV (bubble/dew P for
+zeotropes).
 
 ## Design principle — two tiers
 
@@ -68,9 +70,6 @@ Each advanced calculation ships with CoolProp-truth cases in
 
 ## Basic improvements (main face)
 
-B6. **Saturation table export** — button in the Properties pane that copies
-    the saturation line (T, P_sat, h_f, h_g, s_f, s_g, ρ_f, ρ_g) as CSV
-    from `getSatRows`.
 B7. **PWA/offline support** — manifest + service worker caching the static
     assets and tables; no app-logic change.
 
@@ -96,8 +95,7 @@ A9. **Two-stage / cascade cycle builder** — intercooler pressure
     `cycle.js` rework. Last because it depends on A8-style multi-state
     rendering.
 
-Suggested order: B6 →
-A4–A6 → A7 → B7 → A8 → A9.
+Suggested order: A4–A6 → A7 → B7 → A8 → A9.
 
 ## Working notes for contributors
 
