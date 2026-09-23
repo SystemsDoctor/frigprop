@@ -2,23 +2,29 @@
  * app.js — Controller. Wires backend + cycle logic + UI together.
  * The property backend is swappable via this one import (same interface).
  */
-import backend from "./tables.js";
-import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath } from "./cycle.js";
+import backend from "./tables.js?v=20260923a";
+import { computeVCRCStates, analyzeVCRC, validateCycle, expansionPath, coilProfiles, advancedMetrics,
+  isoLines, lookupFromTS, sweepCycle, superheatTable } from "./cycle.js?v=20260923d";
 import { getRefrigerantList, getRefrigerantInfo } from "./refrigerants.js";
 import {
   setStatus, populateRefrigerantSelector, onRefrigerantChange,
   renderInfoPanel, wireInputControls, getInputs, applyInputs, setRangeHint,
   enableCalcButton, onCalcClick, showError, clearError,
-  renderResults, buildResultsCSV, showTranscritWarning, highlightRefCard,
+  renderResults, buildResultsCSV, buildSatCSV, showTranscritWarning, highlightRefCard,
   populateComparisonSelect, getComparisonFluid, onComparisonChange,
-  wireLookupControls, enableLookupButton, showLookupError,
+  wireAdvancedSection, openAdvancedSection, setAdvancedMarkers,
+  getCapacityKW, getCapacityUnit, setCapacity, onCapacityChange, renderAdvancedResults,
+  wireLookupControls, enableLookupButton, showLookupError, setLookupInputs,
   renderLookupState, renderLookupSat,
   refreshUnitLabels, refreshLookupFields, onUnitToggle,
-} from "./ui.js";
+  showToolError, getSweepInputs, setSweepRange, renderSweep, buildSweepCSV,
+  getSuperheatInputs, setSuperheatDefaults, renderSuperheatTable, buildSuperheatCSV,
+  renderHistory, onHistoryAction, onIhxChange,
+} from "./ui.js?v=20260923f";  // versioned: new exports must not meet a cached ui.js
 import {
-  initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker,
-} from "./chart.js";
-import * as units from "./units.js";
+  initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker, onDiagramPick,
+} from "./chart.js?v=20260923c";
+import * as units from "./units.js?v=20260923a";
 
 let currentFluidKey = null;
 let currentInfo = null;
@@ -26,6 +32,8 @@ let currentInfo = null;
 let last = null;        // { primary, comparison } bundles from handleCalc
 let lastInputs = null;  // SI inputs of the last successful calculation
 let lastLookup = null;  // { kind: "state"|"sat", data, phaseLabel }
+let lastSweep = null;   // { variable, series } from handleSweep
+let lastSht = null;     // { designation, tbl } from handleSuperheatTable
 
 async function init() {
   // Resolve unit system from URL before wiring controls so labels render correctly once.
@@ -33,9 +41,11 @@ async function init() {
   if (params.get("u") === "IP") units.setSystem("IP");
 
   wireInputControls();
+  wireAdvancedSection();
   wireLookupControls(handleLookup);  // calls refreshLookupFields() internally
   onUnitToggle(handleUnitToggle);
   initCharts();
+  onDiagramPick(handleDiagramPick);
   refreshUnitLabels();
 
   try {
@@ -70,6 +80,16 @@ async function init() {
     await selectFluid(key);
   });
   onComparisonChange(handleComparisonChange);
+  // IHX alters the main cycle: re-flag it and re-run a calculated cycle
+  onIhxChange(async () => {
+    _refreshAdvancedMarkers();
+    if (lastInputs) await handleCalc();
+  });
+  onCapacityChange(() => {
+    if (!last) return;
+    _attachAdvanced();
+    renderAdvancedResults(last.primary, last.comparison);
+  });
   onCalcClick(handleCalc);
 
   const csvBtn = document.getElementById("export-csv-btn");
@@ -77,6 +97,13 @@ async function init() {
     if (!last) return;
     _copyToClipboard(buildResultsCSV(last.primary, last.comparison), csvBtn);
   });
+  const satBtn = document.getElementById("sat-csv-btn");
+  satBtn.addEventListener("click", () => {
+    const rows = currentFluidKey && backend.getSatRows(currentFluidKey);
+    if (!rows || !currentInfo) return;
+    _copyToClipboard(buildSatCSV(currentInfo.ashrae_designation, currentInfo.reference_state, rows), satBtn);
+  });
+  _wireAdvancedTools();
   const linkBtn = document.getElementById("share-link-btn");
   if (linkBtn) linkBtn.addEventListener("click", () => {
     const url = _buildShareURL();
@@ -103,12 +130,23 @@ async function selectFluid(key) {
     renderInfoPanel(key, info, meta);
     setRangeHint(meta);
     highlightRefCard(key, info);
+    document.getElementById("sat-csv-btn").disabled = false;
+    // fluid-specific tools start over for the new fluid
+    lastSweep = lastSht = null;
+    renderSweep(null);
+    renderSuperheatTable(null);
+    showToolError("sweep-error", null);
+    showToolError("sht-error", null);
+    document.getElementById("sweep-btn").disabled = true;
+    document.getElementById("sht-btn").disabled = false;
+    _prefillSuperheat();
     setStatus("ready", `Ready — ${key}`);
     enableCalcButton(true);
     enableLookupButton(true);
     clearError();
     // Hide old results
     document.getElementById("results-section").classList.add("hidden");
+    renderAdvancedResults(null);
     document.getElementById("warnings-box").classList.add("hidden");
     document.getElementById("notes-box").classList.add("hidden");
     document.getElementById("transcrit-notice").classList.add("hidden");
@@ -139,6 +177,9 @@ async function handleComparisonChange() {
   // comparison cycle (if any) no longer matches the selection — keep primary only
   if (last) last.comparison = null;
   await _updateDiagram();
+  // the control sits below the results: re-run a calculated cycle so the
+  // results + diagram reflect the new selection without another click
+  if (lastInputs) await handleCalc();
 }
 
 /** Chart bundle for one fluid; states/expPath may be null (dome only). */
@@ -161,7 +202,268 @@ async function _updateDiagram() {
     const name = currentInfo ? currentInfo.ashrae_designation : currentFluidKey;
     fluidLabel.textContent = compare ? `${name} vs ${compKey}` : name;
   }
-  if (primary.satRows) updateCharts(primary, compare);
+  if (primary.satRows) updateCharts(primary, compare, await _isoLines(primary.satRows));
+  _refreshAdvancedMarkers();
+}
+
+/**
+ * Pressures that are round in the display unit (1-2-5, else 1-3, else
+ * decades) inside the saturation range, at most `max` of them; display units.
+ */
+function _roundPressures(rows, max) {
+  const n = rows.length;
+  const pLo = units.toDisplay(Math.min(rows[0][10], rows[0][11]), "P");
+  const pHi = units.toDisplay(Math.max(rows[n - 1][10], rows[n - 1][11]), "P");
+  let pressures = [];
+  for (const mult of [[1, 2, 5], [1, 3], [1]]) {
+    pressures = [];
+    for (let e = Math.floor(Math.log10(pLo)); e <= Math.ceil(Math.log10(pHi)); e++) {
+      for (const m of mult) { const v = m * 10 ** e; if (v > pLo && v < pHi) pressures.push(v); }
+    }
+    if (pressures.length <= max) break;
+  }
+  return pressures;
+}
+
+/** Tabulated pressure extent of the current fluid (kPa). */
+function _pRange(rows) {
+  return { P_lo_kPa: Math.min(rows[0][10], rows[0][11]),
+           P_hi_kPa: backend.getFluidMeta(currentFluidKey).P_max_kPa };
+}
+
+/**
+ * Backdrop iso-lines for the current fluid at values that are round in the
+ * display units: 1-2-5 (or sparser) pressures, even temperature steps.
+ */
+async function _isoLines(rows) {
+  const n = rows.length;
+  const states = [last && last.primary, last && last.comparison].flatMap(b => b ? b.states : []);
+  const T_hi = Math.max(rows[n - 1][0], ...states.map(s => s.T_C)) + 15;
+  const range = { T_lo_C: rows[0][0], T_hi_C: T_hi, ..._pRange(rows) };
+
+  const disp = (v, k) => units.toDisplay(v, k);
+  const pressures = _roundPressures(rows, 9);
+  const tLo = disp(range.T_lo_C, "T"), tHi = disp(T_hi, "T");
+  const step = [5, 10, 20, 25, 50, 100].find(st => (tHi - tLo) / st <= 8) || 200;
+  const temps = [];
+  for (let v = Math.ceil(tLo / step) * step; v < tHi; v += step) temps.push(v);
+
+  try {
+    await backend.init(currentFluidKey);  // cached; comparison may have switched fluid
+    return await isoLines(backend, pressures.map(v => units.fromInput(v, "P")),
+                          temps.map(v => units.fromInput(v, "T")), range);
+  } catch (_) {
+    return null;  // backdrop only — never block the diagram
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Advanced Tools — sensitivity sweep, superheated table, recent cycles
+// ---------------------------------------------------------------------------
+
+const HISTORY_KEY = "frigprop.history";  // sessionStorage: recent cycles
+const PINNED_KEY = "frigprop.pinned";    // localStorage: pinned cycles
+const HISTORY_MAX = 8;
+
+function _wireAdvancedTools() {
+  const byId = id => document.getElementById(id);
+  byId("sweep-btn").addEventListener("click", handleSweep);
+  byId("sweep-var").addEventListener("change", _prefillSweep);
+  byId("sweep-csv-btn").addEventListener("click", () => {
+    if (lastSweep) _copyToClipboard(buildSweepCSV(lastSweep), byId("sweep-csv-btn"));
+  });
+  byId("sht-btn").addEventListener("click", handleSuperheatTable);
+  byId("sht-prop").addEventListener("change", () => {
+    if (lastSht) renderSuperheatTable(lastSht, byId("sht-prop").value);
+  });
+  byId("sht-csv-btn").addEventListener("click", () => {
+    if (lastSht) _copyToClipboard(buildSuperheatCSV(lastSht), byId("sht-csv-btn"));
+  });
+  onHistoryAction(handleHistoryAction);
+  _renderHistory();
+}
+
+/** Default sweep range around the last cycle's swept temperature. */
+function _prefillSweep() {
+  if (!lastInputs) return;
+  const T1 = getSweepInputs().variable === "T1";
+  const c = T1 ? lastInputs.T1_C : lastInputs.T3_C;
+  setSweepRange(c - (T1 ? 15 : 10), c + (T1 ? 10 : 15));
+}
+
+let _shtDefaults = "";  // form values _prefillSuperheat() last wrote
+
+/** Default superheated-table form for the current fluid (round display values). */
+function _prefillSuperheat() {
+  const rows = backend.getSatRows(currentFluidKey);
+  const pressures = _roundPressures(rows, 7);
+  const step = units.getSystem() === "IP" ? 20 : 10;
+  const tLo = units.toDisplay(rows[0][0], "T"), tTop = units.toDisplay(rows[rows.length - 1][0] + 40, "T");
+  const from = Math.ceil(tLo / step) * step;
+  setSuperheatDefaults(pressures, from, Math.min(Math.floor(tTop / step) * step, from + 20 * step), step);
+  _shtDefaults = _shtFormValues();
+}
+
+function _shtFormValues() {
+  return ["sht-p", "sht-from", "sht-to", "sht-step"].map(id => document.getElementById(id).value).join("|");
+}
+
+/**
+ * Carry the tool forms across a unit toggle (values were read in SI).
+ * Untouched superheated-table defaults are re-rounded in the new units.
+ */
+function _convertToolInputs({ sweep, sht }, shtUntouched) {
+  if (Number.isFinite(sweep.from_C) && Number.isFinite(sweep.to_C)) setSweepRange(sweep.from_C, sweep.to_C);
+  const d = (v, k) => +units.toDisplay(v, k).toPrecision(4);
+  if (shtUntouched && currentFluidKey) {
+    _prefillSuperheat();
+  } else if (sht.pressures_kPa.length && Number.isFinite(sht.from_C)) {
+    setSuperheatDefaults(sht.pressures_kPa.map(p => d(p, "P")), d(sht.from_C, "T"),
+                         d(sht.to_C, "T"), d(sht.step_K, "dT"));
+  }
+}
+
+async function handleSweep() {
+  showToolError("sweep-error", null);
+  if (!lastInputs || !last) return;
+  const { variable, from_C, to_C, n } = getSweepInputs();
+  if (!Number.isFinite(from_C) || !Number.isFinite(to_C) || from_C === to_C) {
+    showToolError("sweep-error", "Enter two different sweep temperatures."); return;
+  }
+  if (!(n >= 2 && n <= 41)) {
+    showToolError("sweep-error", `Number of points ${isNaN(n) ? "" : n + " "}out of range — use 2 to 41.`); return;
+  }
+  const values = Array.from({ length: n }, (_, i) => from_C + i * (to_C - from_C) / (n - 1));
+  const keys = [last.primary.key, last.comparison && last.comparison.key].filter(Boolean);
+  const series = [];
+  try {
+    for (const key of keys) {
+      await backend.init(key);
+      series.push({ key, pts: await sweepCycle(backend, lastInputs, variable, values) });
+    }
+  } catch (err) {
+    showToolError("sweep-error", `Sweep failed: ${err.message}.`); return;
+  } finally {
+    await backend.init(currentFluidKey);
+  }
+  if (series.every(sr => sr.pts.every(p => p.error))) {
+    showToolError("sweep-error", "No point of the sweep is inside the table range — narrow the range toward the base cycle.");
+    return;
+  }
+  lastSweep = { variable, series };
+  renderSweep(lastSweep);
+}
+
+async function handleSuperheatTable() {
+  showToolError("sht-error", null);
+  const { pressures_kPa, from_C, to_C, step_K } = getSuperheatInputs();
+  if (!pressures_kPa.length || pressures_kPa.some(p => !(p > 0))) {
+    showToolError("sht-error", "Enter one or more positive pressures, separated by commas."); return;
+  }
+  if (pressures_kPa.length > 20) {
+    showToolError("sht-error", `${pressures_kPa.length} pressures entered — use at most 20.`); return;
+  }
+  if (!Number.isFinite(from_C) || !Number.isFinite(to_C) || !(step_K > 0) || to_C < from_C) {
+    showToolError("sht-error", "Enter a temperature range (from ≤ to) and a positive step."); return;
+  }
+  const count = Math.floor((to_C - from_C) / step_K + 1e-9) + 1;
+  if (count > 80) {
+    showToolError("sht-error", `That range gives ${count} temperature rows — use at most 80 (larger step).`); return;
+  }
+  const temps = Array.from({ length: count }, (_, i) => from_C + i * step_K);
+  await backend.init(currentFluidKey);
+  const tbl = await superheatTable(backend, [...pressures_kPa].sort((a, b) => a - b), temps);
+  if (tbl.rows.every(r => r.cells.every(c => !c))) {
+    showToolError("sht-error", "Every cell is at or below saturation or outside the tables — raise the temperatures.");
+    return;
+  }
+  lastSht = { designation: currentInfo ? currentInfo.ashrae_designation : currentFluidKey, tbl };
+  renderSuperheatTable(lastSht, getSuperheatInputs().prop);
+}
+
+/** Storage list helpers — storage can be unavailable (private mode, previews). */
+function _loadList(storeName, key) {
+  try { return JSON.parse(window[storeName].getItem(key)) || []; } catch (_) { return []; }
+}
+function _saveList(storeName, key, list) {
+  try { window[storeName].setItem(key, JSON.stringify(list)); } catch (_) { /* not persisted */ }
+}
+
+function _renderHistory() {
+  renderHistory(_loadList("localStorage", PINNED_KEY), _loadList("sessionStorage", HISTORY_KEY));
+}
+
+/** Record the cycle just calculated at the top of the recent list. */
+function _pushHistory() {
+  const url = _buildShareURL();
+  if (!url) return;
+  const q = new URLSearchParams(new URL(url).search);
+  q.delete("u");
+  q.delete("d");
+  const entry = {
+    qs: q.toString(), inputs: lastInputs, cop: last.primary.metrics.COP_c,
+    designation: currentInfo ? currentInfo.ashrae_designation : currentFluidKey,
+    compare: last.comparison
+      ? document.getElementById("compare-fluid").selectedOptions[0].textContent : null,
+  };
+  const recent = _loadList("sessionStorage", HISTORY_KEY).filter(e => e.qs !== entry.qs);
+  recent.unshift(entry);
+  _saveList("sessionStorage", HISTORY_KEY, recent.slice(0, HISTORY_MAX));
+  _renderHistory();
+}
+
+async function handleHistoryAction(act, list, i) {
+  const pinned = _loadList("localStorage", PINNED_KEY);
+  const recent = _loadList("sessionStorage", HISTORY_KEY);
+  const entry = (list === "pinned" ? pinned : recent)[i];
+  if (!entry) return;
+  if (act === "pin") {
+    if (!pinned.some(e => e.qs === entry.qs)) pinned.unshift(entry);
+    _saveList("localStorage", PINNED_KEY, pinned.slice(0, HISTORY_MAX));
+  } else if (act === "unpin") {
+    pinned.splice(i, 1);
+    _saveList("localStorage", PINNED_KEY, pinned);
+  } else if (act === "recall") {
+    const p = new URLSearchParams(entry.qs);
+    document.getElementById("compare-fluid").value = "";  // the entry decides
+    setCapacity(null);
+    last = null;
+    lastInputs = null;  // no auto-recalc of the old inputs on comparison change
+    if (p.get("f") !== currentFluidKey && backend.getFluidMeta(p.get("f"))) await selectFluid(p.get("f"));
+    await _applyShareParams(p);
+    return;  // handleCalc re-renders the list
+  }
+  _renderHistory();
+}
+
+/** Diagram click → fill and run the Property Lookup at that point. */
+async function handleDiagramPick({ mode, x, y }) {
+  if (!currentFluidKey) return;
+  try {
+    await backend.init(currentFluidKey);
+    const spec = mode === "ph"
+      ? { pair: "PH", v1: y, v2: x }
+      : await lookupFromTS(backend, y, x, _pRange(backend.getSatRows(currentFluidKey)));
+    setLookupInputs(spec.pair, spec.v1, spec.v2);
+    await handleLookup(spec);
+  } catch (_) {
+    setLookupMarker(null);
+    showLookupError(`That diagram point is outside the tabulated region for ${currentFluidKey} — ` +
+                    `pick inside the dome or in the vapor region.`);
+  }
+}
+
+/** Flag the results + diagram with every active advanced option. */
+function _refreshAdvancedMarkers() {
+  const labels = [];
+  const ihx = getInputs().ihx_eff;
+  if (ihx > 0) labels.push(`IHX ε ${Math.round(ihx * 100)} %`);
+  const compKey = getComparisonFluid(currentFluidKey);
+  if (compKey) {
+    const sel = document.getElementById("compare-fluid");
+    labels.push(`vs ${sel.options[sel.selectedIndex].textContent}`);
+  }
+  setAdvancedMarkers(labels);
 }
 
 async function handleCalc() {
@@ -196,6 +498,9 @@ async function handleCalc() {
   }
   if (inputs.eta_isen <= 0 || inputs.eta_isen > 1) {
     showError("Compressor: isentropic efficiency must be between 10 % and 100 %."); return;
+  }
+  if (Number.isNaN(inputs.ihx_eff) || inputs.ihx_eff < 0 || inputs.ihx_eff > 1) {
+    showError("Internal heat exchanger (Advanced Tools): effectiveness must be between 1 % and 100 %."); return;
   }
 
   // Range validation against fluid metadata (friendly, in display units)
@@ -246,8 +551,9 @@ async function handleCalc() {
     const states = await computeVCRCStates(backend, inputs);
     const metrics = analyzeVCRC(states);
     const { warnings, notes } = validateCycle(states);
-    const expPath = await expansionPath(backend, states[2], states[3]);
-    const primary = { key: currentFluidKey, states, metrics, warnings, notes, expPath };
+    const expPath = await expansionPath(backend, states.ihx ? states.ihx.liquid : states[2], states[3]);
+    const coils = await coilProfiles(backend, states, inputs);
+    const primary = { key: currentFluidKey, states, metrics, warnings, notes, expPath, coils };
 
     // Same cycle inputs on the comparison fluid (errors don't block the primary)
     let comparison = null;
@@ -258,7 +564,8 @@ async function handleCalc() {
         const cStates = await computeVCRCStates(backend, inputs);
         comparison = {
           key: compKey, states: cStates, metrics: analyzeVCRC(cStates),
-          expPath: await expansionPath(backend, cStates[2], cStates[3]),
+          expPath: await expansionPath(backend, cStates.ihx ? cStates.ihx.liquid : cStates[2], cStates[3]),
+          coils: await coilProfiles(backend, cStates, inputs),
         };
       } catch (err) {
         warnings.push(`Comparison fluid ${compKey}: ${err.message}.`);
@@ -269,7 +576,12 @@ async function handleCalc() {
 
     last = { primary, comparison };
     lastInputs = inputs;
+    _attachAdvanced();
     renderResults(primary, comparison);
+    renderAdvancedResults(primary, comparison);
+    document.getElementById("sweep-btn").disabled = false;
+    if (document.getElementById("sweep-from").value === "") _prefillSweep();
+    _pushHistory();
     await _updateDiagram();
     setStatus("ready", `Ready — ${currentFluidKey}`);
   } catch (err) {
@@ -277,6 +589,14 @@ async function handleCalc() {
     showError(`Calculation error: ${err.message}`);
   } finally {
     enableCalcButton(true);
+  }
+}
+
+/** (Re)compute the Advanced Tools metrics on the last cycle bundles. */
+function _attachAdvanced() {
+  const cap = getCapacityKW();
+  for (const b of [last.primary, last.comparison]) {
+    if (b) b.adv = advancedMetrics(b.states, b.metrics, b.coils, cap);
   }
 }
 
@@ -312,6 +632,8 @@ async function handleLookup(inp) {
 
 /** Switch SI ⇄ IP: relabel everything and re-render retained results. */
 function handleUnitToggle() {
+  const toolInputs = { sweep: getSweepInputs(), sht: getSuperheatInputs() };  // SI, pre-toggle
+  const shtUntouched = _shtFormValues() === _shtDefaults;
   units.setSystem(units.getSystem() === "SI" ? "IP" : "SI");
   refreshUnitLabels();
   refreshLookupFields();
@@ -319,7 +641,14 @@ function handleUnitToggle() {
   const meta = currentFluidKey ? backend.getFluidMeta(currentFluidKey) : null;
   if (meta) setRangeHint(meta);
   if (currentInfo) renderInfoPanel(currentFluidKey, currentInfo, meta);
-  if (last) renderResults(last.primary, last.comparison);
+  if (last) {
+    renderResults(last.primary, last.comparison);
+    renderAdvancedResults(last.primary, last.comparison);
+  }
+  _convertToolInputs(toolInputs, shtUntouched);
+  renderSweep(lastSweep);
+  if (lastSht) renderSuperheatTable(lastSht, getSuperheatInputs().prop);
+  _renderHistory();
   if (lastLookup) {
     if (lastLookup.kind === "sat") renderLookupSat(lastLookup.data);
     else renderLookupState(lastLookup.data, lastLookup.phaseLabel);
@@ -367,6 +696,12 @@ function _buildShareURL() {
     else p.set("sc", +lastInputs.dT_sc_K.toFixed(2));
   }
   if (lastInputs.eta_isen < 1) p.set("eta", Math.round(lastInputs.eta_isen * 100));
+  if (lastInputs.ihx_eff > 0) p.set("ihx", Math.round(lastInputs.ihx_eff * 100));
+  const cap = getCapacityKW();
+  if (cap) {
+    p.set("q", +cap.toFixed(4));
+    if (getCapacityUnit() === "TR") p.set("qu", "TR");
+  }
   if (units.getSystem() === "IP") p.set("u", "IP");
   if (getChartMode() !== "ts") p.set("d", getChartMode());
   return `${location.origin}${location.pathname}?${p}`;
@@ -378,7 +713,13 @@ async function _applyShareParams(p) {
   const compKey = p.get("c");
   if (compKey && backend.getFluidMeta(compKey)) {
     document.getElementById("compare-fluid").value = compKey;
+    openAdvancedSection();
     await handleComparisonChange();
+  }
+  const q = parseFloat(p.get("q"));
+  if (q > 0) {
+    setCapacity(q, p.get("qu"));
+    openAdvancedSection();
   }
   const te = parseFloat(p.get("te"));
   const tc = parseFloat(p.get("tc"));
@@ -394,7 +735,9 @@ async function _applyShareParams(p) {
     dT_sc_K: parseFloat(p.get("sc")),
     P_cond_kPa: parseFloat(p.get("scp")),
     eta_isen: p.has("eta") ? parseFloat(p.get("eta")) / 100 : 1,
+    ihx_eff: p.has("ihx") ? parseFloat(p.get("ihx")) / 100 : 0,
   });
+  if (p.has("ihx")) openAdvancedSection();
   await handleCalc();
 }
 
@@ -417,4 +760,12 @@ function _copyToClipboard(text, btn) {
   }
 }
 
+/** Offline support: cache the app + tables (served over https or localhost only). */
+function _registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  if (location.protocol !== "https:" && location.hostname !== "localhost") return;
+  navigator.serviceWorker.register("./sw.js").catch(() => { /* offline support is optional */ });
+}
+
 init();
+_registerServiceWorker();

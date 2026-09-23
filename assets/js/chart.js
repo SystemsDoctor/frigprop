@@ -5,7 +5,7 @@
  * Pure rendering: states/paths are computed upstream (cycle.js via app.js).
  */
 
-import * as units from "./units.js";
+import * as units from "./units.js?v=20260923a";
 
 // Primary fluid keeps the classic palette; the comparison fluid gets its own.
 const PALETTES = [
@@ -20,6 +20,8 @@ const STYLE = {
   label:   '#5a7a94',
   tooltip: { bg: 'rgba(11,17,26,0.96)', border: '#1e2d3d', title: '#eaf4ff', body: '#c8d8e8' },
   font:    "'IBM Plex Mono', monospace",
+  iso:      'rgba(90,122,148,0.36)',
+  isoLabel: 'rgba(90,122,148,0.85)',
 };
 
 // mode → axis mapping (SI kinds) and point pickers
@@ -43,6 +45,8 @@ let _primary  = null;   // { label, satRows, states, expPath }
 let _compare  = null;   // same shape, or null
 let _marker   = null;   // full lookup state, or null
 let _bounds   = null;   // natural bounds for the current mode/data
+let _iso      = null;   // { isobars, isotherms } backdrop lines, or null
+let _onPick   = null;   // diagram click handler
 
 const MARKER_LABEL = '_lookup';
 
@@ -50,6 +54,8 @@ const MARKER_LABEL = '_lookup';
 let _drag   = false;
 let _lastX  = 0;
 let _lastY  = 0;
+let _downX  = 0;   // press position — a click that moved is a pan, not a pick
+let _downY  = 0;
 let _touchX = 0;
 let _touchY = 0;
 
@@ -61,6 +67,38 @@ const _bgPlugin = {
     ctx.save();
     ctx.fillStyle = STYLE.bg;
     ctx.fillRect(0, 0, chart.width, chart.height);
+    ctx.restore();
+  },
+};
+
+// Iso-line labels at each line's first/last visible point (per isoAnchor),
+// so they stay in view on pan/zoom; a label that would overlap one already
+// drawn is skipped.
+const _isoLabelPlugin = {
+  id: 'frigprop-iso-labels',
+  afterDatasetsDraw(chart) {
+    const { ctx, chartArea: a } = chart;
+    const drawn = [];
+    ctx.save();
+    ctx.font = `9px ${STYLE.font}`;
+    ctx.fillStyle = STYLE.isoLabel;
+    ctx.textBaseline = 'bottom';
+    chart.data.datasets.forEach((ds, i) => {
+      if (!ds.isoText) return;
+      const pts = chart.getDatasetMeta(i).data;
+      const order = ds.isoAnchor === 'start' ? pts : [...pts].reverse();
+      const p = order.find(({ x, y }) => x >= a.left && x <= a.right && y >= a.top && y <= a.bottom);
+      if (!p) return;
+      const w = ctx.measureText(ds.isoText).width;
+      const right = p.x > a.right - w - 6;
+      const x0 = right ? p.x - 3 - w : p.x + 3;
+      const y1 = Math.max(p.y - 2, a.top + 10);
+      const box = { l: x0 - 2, r: x0 + w + 2, t: y1 - 11, b: y1 + 1 };
+      if (drawn.some(d => box.l < d.r && box.r > d.l && box.t < d.b && box.b > d.t)) return;
+      drawn.push(box);
+      ctx.textAlign = 'left';
+      ctx.fillText(ds.isoText, x0, y1);
+    });
     ctx.restore();
   },
 };
@@ -78,8 +116,8 @@ export function initCharts() {
   // Mouse pan
   _canvas.addEventListener('mousedown', e => {
     _drag  = true;
-    _lastX = e.clientX;
-    _lastY = e.clientY;
+    _lastX = _downX = e.clientX;
+    _lastY = _downY = e.clientY;
     _canvas.style.cursor = 'grabbing';
     e.preventDefault();
   });
@@ -98,9 +136,21 @@ export function initCharts() {
   _canvas.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
     _drag  = true;
-    _touchX = e.touches[0].clientX;
-    _touchY = e.touches[0].clientY;
+    _touchX = _downX = e.touches[0].clientX;
+    _touchY = _downY = e.touches[0].clientY;
   }, { passive: true });
+
+  // Click (not a pan) inside the plot area → pick that diagram point
+  _canvas.addEventListener('click', e => {
+    if (!_chart || !_onPick) return;
+    if (Math.hypot(e.clientX - _downX, e.clientY - _downY) > 4) return;
+    const a = _chart.chartArea;
+    const px = e.offsetX, py = e.offsetY;
+    if (px < a.left || px > a.right || py < a.top || py > a.bottom) return;
+    _onPick({ mode: _mode,
+              x: _chart.scales.x.getValueForPixel(px),
+              y: _chart.scales.y.getValueForPixel(py) });
+  });
   _canvas.addEventListener('touchmove', e => {
     if (!_drag || !_chart || e.touches.length !== 1) return;
     e.preventDefault();
@@ -151,11 +201,21 @@ export function getChartMode() {
  * Render or update the diagram. Always resets to natural view bounds.
  * @param {object}      primary  — { label, satRows, states|null, expPath|null }
  * @param {object|null} compare  — same shape for the comparison fluid
+ * @param {object|null} [iso]    — { isobars, isotherms } from cycle.js isoLines()
  */
-export function updateCharts(primary, compare) {
+export function updateCharts(primary, compare, iso = null) {
   _primary = primary;
   _compare = compare || null;
+  _iso = iso;
   _rebuild();
+}
+
+/**
+ * Register a handler for clicks on the plot area (not pans). Receives
+ * { mode: "ts"|"ph", x, y } in SI: (s, T °C) on T-s, (h, P kPa) on P-h.
+ */
+export function onDiagramPick(handler) {
+  _onPick = handler;
 }
 
 /**
@@ -200,7 +260,7 @@ function _rebuild() {
   const fluids = [_primary, _compare].filter(Boolean);
   _bounds = _calcBounds(fluids);
 
-  const datasets = [];
+  const datasets = _buildIsoDatasets();
   fluids.forEach((f, i) => {
     const pal = PALETTES[i];
     datasets.push(..._buildDomeDatasets(f, pal));
@@ -222,7 +282,7 @@ function _rebuild() {
       type:    'scatter',
       data:    { datasets },
       options,
-      plugins: [_bgPlugin],
+      plugins: [_bgPlugin, _isoLabelPlugin],
     });
   }
 }
@@ -312,7 +372,7 @@ function _calcBounds(fluids) {
   };
   for (const f of fluids) {
     for (const r of f.satRows) { eat(r[cf], r[cy]); eat(r[cg], r[cy]); }
-    if (f.states) for (const s of f.states) { const p = MODES[_mode].pt(s); eat(p.x, p.y); }
+    if (f.states) for (const { st } of _statePoints(f.states)) { const p = MODES[_mode].pt(st); eat(p.x, p.y); }
   }
   const xPad = (xMax - xMin) * 0.07;
   if (_isLogY()) {
@@ -342,15 +402,30 @@ function _buildDomeDatasets(fluid, pal) {
   ];
 }
 
+/** States in flow order with labels: 1, (1′), 2, 3, (3′), 4 — primed ones only with an IHX. */
+function _statePoints(states) {
+  const [s1, s2, s3, s4] = states;
+  const x = states.ihx;
+  return [
+    { label: '1', st: s1 }, ...(x ? [{ label: '1′', st: x.suction }] : []),
+    { label: '2', st: s2 },
+    { label: '3', st: s3 }, ...(x ? [{ label: '3′', st: x.liquid }] : []),
+    { label: '4', st: s4 },
+  ];
+}
+
 function _buildCycleDatasets(fluid, pal) {
   const { states, satRows, expPath } = fluid;
   const [s1, s2, s3, s4] = states;
   const pt = MODES[_mode].pt;
+  // internal heat exchanger: compression starts at 1′, expansion at 3′
+  const s1c = states.ihx ? states.ihx.suction : null;
+  const s3v = states.ihx ? states.ihx.liquid : s3;
 
   let cyclePath;
   if (_mode === 'ts') {
-    // 1→2: compression — vertical at s1 for ideal, slanted when η < 1
-    const path12 = [pt(s1), pt(s2)];
+    // (1→1′ IHX heating) 1→2: compression — vertical for ideal, slanted when η < 1
+    const path12 = s1c ? [pt(s1), pt(s1c), pt(s2)] : [pt(s1), pt(s2)];
 
     // 2→3: desuperheat → horizontal condensation at Tsat(P_cond) → optional subcool
     const shelf = _satShelfAtP(satRows, s2.P_kPa);
@@ -364,11 +439,12 @@ function _buildCycleDatasets(fluid, pal) {
     } else {
       path23 = [pt(s2), pt(s3)];
     }
+    if (s1c) path23.push(pt(s3v));  // 3→3′: IHX liquid cooling
 
     // 3→4: isenthalpic expansion — true constant-h contour when provided
     const path34 = (expPath && expPath.length > 2)
       ? expPath.map(p => ({ x: p.s, y: p.T_C }))
-      : [pt(s3), pt(s4)];
+      : [pt(s3v), pt(s4)];
 
     // 4→1: horizontal evaporation at Tsat(P_evap) → optional superheat rise
     const shelfE = _satShelfAtP(satRows, s4.P_kPa);
@@ -380,7 +456,7 @@ function _buildCycleDatasets(fluid, pal) {
     cyclePath = [...path12, ...path23.slice(1), ...path34.slice(1), ...path41.slice(1)];
   } else {
     // P-h: condenser/evaporator are exact horizontals, expansion exact vertical
-    cyclePath = [pt(s1), pt(s2), pt(s3), pt(s4), pt(s1)];
+    cyclePath = [..._statePoints(states).map(p => pt(p.st)), pt(s1)];
   }
 
   return [
@@ -394,7 +470,7 @@ function _buildCycleDatasets(fluid, pal) {
     // State point dots
     {
       label: `${fluid.label} states`, isStates: true, fluidLabel: fluid.label,
-      data:  states.map((s, i) => ({ ...pt(s), stateNum: i + 1 })),
+      data:  _statePoints(states).map(p => ({ ...pt(p.st), stateNum: p.label })),
       showLine: false,
       pointRadius: 5, pointHoverRadius: 7,
       pointBackgroundColor: pal.cycle,
@@ -402,6 +478,26 @@ function _buildCycleDatasets(fluid, pal) {
       order: 1, parsing: false,
     },
   ];
+}
+
+/** Faint isobars (T-s) / isotherms (P-h) behind everything, labeled via plugin. */
+function _buildIsoDatasets() {
+  if (!_iso) return [];
+  const ts = _mode === 'ts';
+  const lines = ts ? _iso.isobars : _iso.isotherms;
+  const kind = ts ? 'P' : 'T';
+  return lines.map(l => {
+    const v = units.toDisplay(l.value, kind);
+    return {
+      label: '_iso', isoText: `${+v.toPrecision(4)} ${units.label(kind)}`,
+      // isobars: label at the superheated end; isotherms: at the liquid (top) end
+      isoAnchor: ts ? 'end' : 'start',
+      data: l.pts.map(MODES[_mode].pt),
+      showLine: true, pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0,
+      borderColor: STYLE.iso, borderWidth: 0.75, tension: 0.2,
+      fill: false, order: 4, parsing: false,
+    };
+  });
 }
 
 function _buildMarkerDataset(st) {

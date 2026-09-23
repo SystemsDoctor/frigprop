@@ -129,6 +129,7 @@ function _satRowToState(cols, row) {
     // Bubble/dew per side; equal for pure fluids, differ (glide) for zeotropes.
     // Grid-bridged rows (near critical) carry explicit bubble/dew temps.
     T_bubble_C: row.T_bubble_C ?? d.T, T_dew_C: row.T_dew_C ?? d.T,
+    T_mid_C: row.T_mid_C ?? d.T,  // mid-glide (Q = 0.5) temperature
     P_bub_kPa: d.P_bub ?? d.P_sat, P_dew_kPa: d.P_dew ?? d.P_sat,
   };
 }
@@ -191,7 +192,25 @@ function _satRowFromGrids(fluidKey, P_kPa) {
   const row = [(T_dew + T_bub) / 2, P_kPa, f.h, g.h, f.s, g.s, f.rho, g.rho, f.u, g.u, P_kPa, P_kPa];
   row.T_bubble_C = T_bub;
   row.T_dew_C = T_dew;
+  row.T_mid_C = _TmidAtP(_cache.get(fluidKey).sat.rows, P_kPa, T_bub, T_dew);
   return row;
+}
+
+/**
+ * Mid-glide (Q = 0.5) temperature at P by inverting the sat table's P_sat
+ * column (log-P), or null outside it or off the bubble→dew span.
+ */
+function _TmidAtP(rows, P_kPa, T_bub, T_dew) {
+  const n = rows.length;
+  if (P_kPa < rows[0][1] || P_kPa > rows[n - 1][1]) return null;
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (rows[mid][1] <= P_kPa) lo = mid; else hi = mid;
+  }
+  const [Ta, Pa] = rows[lo], [Tb, Pb] = rows[hi];
+  const T = Pa === Pb ? Ta : Ta + (Tb - Ta) * Math.log(P_kPa / Pa) / Math.log(Pb / Pa);
+  return T >= Math.min(T_bub, T_dew) - 0.01 && T <= Math.max(T_bub, T_dew) + 0.01 ? T : null;
 }
 
 function _lerpRow(rowA, rowB, xA, xB, x) {
@@ -321,10 +340,14 @@ function _mixState(sat, x, P_kPa) {
   const s = sat.sf + x * (sat.sg - sat.sf);
   const u = (sat.uf !== undefined && sat.uf !== null) ? sat.uf + x * (sat.ug - sat.uf) : null;
   const rho = 1 / (x / sat.rhog + (1 - x) / sat.rhof);
-  // T across the dome: lerp bubble→dew (captures zeotropic glide)
+  // T across the dome, bubble→dew. Zeotropic glide is curved in quality:
+  // quadratic through the mid-glide (Q = 0.5) point when it is known.
   const Tb = sat.T_bubble_C ?? sat.sat_T_C;
   const Td = sat.T_dew_C ?? sat.sat_T_C;
-  const T_C = Tb + x * (Td - Tb);
+  const Tm = sat.T_mid_C;
+  const T_C = (Tm !== null && Tm !== undefined && Math.abs(Td - Tb) > 0.01)
+    ? Tb * (1 - x) * (1 - 2 * x) + Tm * 4 * x * (1 - x) + Td * x * (2 * x - 1)
+    : Tb + x * (Td - Tb);
   return { T_C, P_kPa: P_kPa ?? sat.sat_P_kPa, h, s, u, rho, cp: null, x };
 }
 

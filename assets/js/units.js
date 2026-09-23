@@ -18,6 +18,13 @@ const KINDS = {
   rho: { si: "kg/m³",   ip: "lb/ft³",    toIp: v => v / 16.018463,  fromIp: v => v * 16.018463 },
   v:   { si: "m³/kg",   ip: "ft³/lb",    toIp: v => v * 16.018463,  fromIp: v => v / 16.018463 },
   x:   { si: "0–1",     ip: "0–1",       toIp: v => v,              fromIp: v => v },
+  // system-scale quantities (Advanced Tools)
+  power: { si: "kW",         ip: "Btu/h",    toIp: v => v * 3412.142,  fromIp: v => v / 3412.142 },
+  mdot:  { si: "kg/s",       ip: "lb/min",   toIp: v => v * 132.2774,  fromIp: v => v / 132.2774 },
+  vflow: { si: "m³/h",       ip: "CFM",      toIp: v => v * 0.5885778, fromIp: v => v / 0.5885778 },
+  vcc:   { si: "kJ/m³",      ip: "Btu/ft³",  toIp: v => v / 37.25895,  fromIp: v => v * 37.25895 },
+  // swept volume per unit capacity: m³/h per kW ⇄ CFM per ton (1 TR = 3.516853 kW)
+  vspec: { si: "m³/h per kW", ip: "CFM/ton", toIp: v => v * 2.069942,  fromIp: v => v / 2.069942 },
 };
 
 let _system = "SI";

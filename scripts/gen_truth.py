@@ -9,9 +9,13 @@ qualities, PH/PS inversion (incl. wet PS), near-critical interpolation, and
 the historical failure modes (near-saturation PS for R404A/R290, near-critical
 R134a Tc=95, the R744 subcritical band, 1-10 K subcooling).
 
-Two-phase truth uses the tool's documented linear-in-quality convention
-between the CoolProp-exact saturation endpoints (exact for pure fluids,
-mid-glide approximation for zeotropic blends).
+Two-phase h/s/u/rho truth mixes the CoolProp-exact saturation endpoints
+linearly in quality (the tool's documented convention); two-phase T is the
+CoolProp equilibrium temperature at that (P, h), so zeotropic glide
+curvature is held to the T gate. Cycle cases also carry the glide-aware
+coil temperatures (evaporator inlet T4, dew/bubble at both pressures) and
+suction density rho1, from which the harness derives the Advanced Tools
+truth (volumetric capacity, Carnot COP, capacity scaling).
 """
 
 import json
@@ -29,6 +33,8 @@ CYCLE_VARIANTS = [(0, 0), (0, 5), (10, 5)]
 BASELINE_VARIANTS = [(5, 2), (20, 10)]
 # (eta, sh, sc) compressor-efficiency variants at the baseline condition
 ETA_VARIANTS = [(0.80, 10, 5), (0.65, 0, 0)]
+# (ihx_eff, sh, sc, eta) internal-heat-exchanger variants at the baseline
+IHX_VARIANTS = [(0.5, 5, 2, 1.0), (0.8, 0, 0, 0.75)]
 # (fluid, Tevap_C, Tcond_C) stress cases
 STRESS_CYCLES = [
     ("R134a", -10, 95), ("R744", -10, 22), ("R744", -10, 28),
@@ -45,10 +51,15 @@ def K(T_C):
     return T_C + 273.15
 
 
-def solve_T_from(cp_name, P_Pa, output, target):
-    """Bisection on T for mixtures where CoolProp's H/S+P flash fails."""
-    T_lo = CP.PropsSI("T", "P", P_Pa, "Q", 1, cp_name) + 0.02
-    T_hi = T_lo + 400
+def solve_T_from(cp_name, P_Pa, output, target, liquid=False):
+    """Bisection on T for mixtures where CoolProp's H/S+P flash fails —
+    above the dew point (vapor) or, with liquid=True, below the bubble point."""
+    if liquid:
+        T_hi = CP.PropsSI("T", "P", P_Pa, "Q", 0, cp_name) - 0.02
+        T_lo = T_hi - 150
+    else:
+        T_lo = CP.PropsSI("T", "P", P_Pa, "Q", 1, cp_name) + 0.02
+        T_hi = T_lo + 400
     for _ in range(80):
         T_m = (T_lo + T_hi) / 2
         if CP.PropsSI(output, "T", T_m, "P", P_Pa, cp_name) < target:
@@ -78,31 +89,50 @@ def isentropic_to(cp_name, P_Pa, s1):
         return CP.PropsSI("H", "T", T2, "P", P_Pa, cp_name), T2
 
 
+def T_two_phase(cp_name, P_Pa, h):
+    """Equilibrium T at (P, h) inside the dome. Bisects on vapor quality —
+    PQ flashes converge for mixture models where PH flashes fail."""
+    Tb = CP.PropsSI("T", "P", P_Pa, "Q", 0, cp_name)
+    Td = CP.PropsSI("T", "P", P_Pa, "Q", 1, cp_name)
+    if abs(Td - Tb) < 1e-6:
+        return Tb
+    lo, hi = 0.0, 1.0
+    for _ in range(30):
+        q = (lo + hi) / 2
+        if CP.PropsSI("H", "P", P_Pa, "Q", q, cp_name) < h:
+            lo = q
+        else:
+            hi = q
+    return CP.PropsSI("T", "P", P_Pa, "Q", (lo + hi) / 2, cp_name)
+
+
 def T_from_PH(cp_name, P_Pa, h):
     """T after a P,h flash; handles wet states and mixture flash failures."""
     hg = CP.PropsSI("H", "P", P_Pa, "Q", 1, cp_name)
-    if h < hg:  # inside the dome — linear-in-quality T across the glide
-        hf = CP.PropsSI("H", "P", P_Pa, "Q", 0, cp_name)
-        x = (h - hf) / (hg - hf)
-        Tb = CP.PropsSI("T", "P", P_Pa, "Q", 0, cp_name)
-        Td = CP.PropsSI("T", "P", P_Pa, "Q", 1, cp_name)
-        return Tb + x * (Td - Tb)
+    hf = CP.PropsSI("H", "P", P_Pa, "Q", 0, cp_name)
+    if hf <= h < hg:  # inside the dome
+        return T_two_phase(cp_name, P_Pa, h)
     try:
         return CP.PropsSI("T", "P", P_Pa, "H", h, cp_name)
     except ValueError:
-        return solve_T_from(cp_name, P_Pa, "H", h)
+        return solve_T_from(cp_name, P_Pa, "H", h, liquid=h < hf)
 
 
-def cycle_truth(cp_name, Te_C, Tc_C, sh_K, sc_K, eta=1.0):
+def cycle_truth(cp_name, Te_C, Tc_C, sh_K, sc_K, eta=1.0, ihx=0.0):
     """VCRC: state 1 at Pdew(Te) (+sh), state 3 at Pbub(Tc) (−sc),
-    compression isentropic then corrected to isentropic efficiency eta."""
+    compression isentropic then corrected to isentropic efficiency eta.
+    ihx > 0 adds a suction-line heat exchanger of that effectiveness:
+    Q = ihx·min(vapor 1 heated to T3, liquid 3 cooled to T1); compression
+    starts at 1′ (h1 + Q), expansion at 3′ (h3 − Q)."""
     P1 = CP.PropsSI("P", "T", K(Te_C), "Q", 1, cp_name)
     if sh_K > 0:
         h1 = CP.PropsSI("H", "T", K(Te_C) + sh_K, "P", P1, cp_name)
         s1 = CP.PropsSI("S", "T", K(Te_C) + sh_K, "P", P1, cp_name)
+        rho1 = CP.PropsSI("D", "T", K(Te_C) + sh_K, "P", P1, cp_name)
     else:
         h1 = CP.PropsSI("H", "T", K(Te_C), "Q", 1, cp_name)
         s1 = CP.PropsSI("S", "T", K(Te_C), "Q", 1, cp_name)
+        rho1 = CP.PropsSI("D", "P", P1, "Q", 1, cp_name)
     P2 = CP.PropsSI("P", "T", K(Tc_C), "Q", 0, cp_name)
     h2, T2 = isentropic_to(cp_name, P2, s1)
     if eta < 1:
@@ -112,13 +142,36 @@ def cycle_truth(cp_name, Te_C, Tc_C, sh_K, sc_K, eta=1.0):
         h3 = CP.PropsSI("H", "T", K(Tc_C) - sc_K, "P", P2, cp_name)
     else:
         h3 = CP.PropsSI("H", "T", K(Tc_C), "Q", 0, cp_name)
-    W = (h2 - h1) / 1000.0
-    Qe = (h1 - h3) / 1000.0
+    extra = {}
+    h1c, h3v = h1, h3  # compressor-inlet / valve-inlet enthalpies
+    if ihx > 0:
+        T1a, T3a = K(Te_C) + sh_K, K(Tc_C) - sc_K
+        q_max = CP.PropsSI("H", "T", T3a, "P", P1, cp_name) - h1
+        q_max = min(q_max, h3 - CP.PropsSI("H", "T", T1a, "P", P2, cp_name))
+        Q = ihx * q_max
+        h1c, h3v = h1 + Q, h3 - Q
+        T1s = T_from_PH(cp_name, P1, h1c)
+        s1c = CP.PropsSI("S", "T", T1s, "P", P1, cp_name)
+        rho1 = CP.PropsSI("D", "T", T1s, "P", P1, cp_name)
+        h2, T2 = isentropic_to(cp_name, P2, s1c)
+        if eta < 1:
+            h2 = h1c + (h2 - h1c) / eta
+            T2 = T_from_PH(cp_name, P2, h2)
+        extra = {"h1s": h1c / 1000.0, "T1s": T1s - 273.15, "h3s": h3v / 1000.0,
+                 "T3s": T_from_PH(cp_name, P2, h3v) - 273.15, "Q_ihx": Q / 1000.0}
+    W = (h2 - h1c) / 1000.0
+    Qe = (h1 - h3v) / 1000.0
     return {
         "h1": h1 / 1000.0, "s1": s1 / 1000.0, "h2": h2 / 1000.0,
         "T2": T2 - 273.15, "h3": h3 / 1000.0,
         "P1_kPa": P1 / 1000.0, "P2_kPa": P2 / 1000.0,
-        "W": W, "Qe": Qe, "COP": Qe / W,
+        "W": W, "Qe": Qe, "COP": Qe / W, "rho1": rho1,
+        # glide-aware coil temperatures
+        "T4": T_two_phase(cp_name, P1, h3v) - 273.15,
+        "T_dew_evap": CP.PropsSI("T", "P", P1, "Q", 1, cp_name) - 273.15,
+        "T_dew_cond": CP.PropsSI("T", "P", P2, "Q", 1, cp_name) - 273.15,
+        "T_bub_cond": CP.PropsSI("T", "P", P2, "Q", 0, cp_name) - 273.15,
+        **extra,
     }
 
 
@@ -171,7 +224,8 @@ def sat_side(cp_name, key, val, Q):
 
 def mix_want(f, g, x):
     """Two-phase state by linear-in-quality mixing of saturation endpoints
-    (the tool's convention; exact for pure fluids, mid-glide for blends)."""
+    (the tool's convention for h/s/u/rho). P-keyed callers replace T_C with
+    the equilibrium value from T_two_phase()."""
     lerp = lambda a, b: a + x * (b - a)
     return {
         "T_C":   lerp(f["T"], g["T"]) - 273.15,
@@ -223,8 +277,11 @@ def props_cases(fluid_key, cfg, cp_name, T_crit_C, P_crit_kPa):
             cases.append({"pair": "TQ", "v1": Tref_C, "v2": x, "want": w})
         fP = sat_side(cp_name, "P", P, 0)
         gP = sat_side(cp_name, "P", P, 1)
-        cases.append({"pair": "PQ", "v1": P_kPa, "v2": 0.5, "want": mix_want(fP, gP, 0.5)})
+        mid = mix_want(fP, gP, 0.5)
+        mid["T_C"] = T_two_phase(cp_name, P, mid["h"] * 1000.0) - 273.15
+        cases.append({"pair": "PQ", "v1": P_kPa, "v2": 0.5, "want": mid})
         wet = mix_want(fP, gP, 0.85)
+        wet["T_C"] = T_two_phase(cp_name, P, wet["h"] * 1000.0) - 273.15
         cases.append({"pair": "PS", "v1": P_kPa, "v2": wet["s"], "want": wet})
 
     # near-critical interpolation (between the 0.80/0.90·P_crit anchors) —
@@ -261,6 +318,13 @@ def main():
                                "want": w})
         Te, Tc = base
         # non-isentropic compression
+        for ihx, sh, sc, eta in IHX_VARIANTS:
+            w = cycle_truth(cp_name, Te, Tc, sh, sc, eta, ihx)
+            if w["T2"] - Tc <= MAX_DISCHARGE_SH_K:
+                case = {"fluid": key, "Te": Te, "Tc": Tc, "sh": sh, "sc": sc, "ihx": ihx, "want": w}
+                if eta < 1:
+                    case["eta"] = eta
+                cycles.append(case)
         for eta, sh, sc in ETA_VARIANTS:
             cycles.append({"fluid": key, "Te": Te, "Tc": Tc, "sh": sh, "sc": sc, "eta": eta,
                            "want": cycle_truth(cp_name, Te, Tc, sh, sc, eta)})
