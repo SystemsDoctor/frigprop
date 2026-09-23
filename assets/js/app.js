@@ -17,7 +17,7 @@ import {
   wireLookupControls, enableLookupButton, showLookupError, setLookupInputs,
   renderLookupState, renderLookupSat,
   refreshUnitLabels, refreshLookupFields, onUnitToggle,
-} from "./ui.js?v=20260923b";  // versioned: new exports must not meet a cached ui.js
+} from "./ui.js?v=20260923c";  // versioned: new exports must not meet a cached ui.js
 import {
   initCharts, updateCharts, setChartMode, getChartMode, setLookupMarker, onDiagramPick,
 } from "./chart.js?v=20260923b";

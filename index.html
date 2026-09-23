@@ -62,7 +62,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/css/style.css?v=20260923b">
+  <link rel="stylesheet" href="./assets/css/style.css?v=20260923c">
 </head>
 <body>
 
@@ -104,6 +104,16 @@
     <div class="pane pane-gallery">
       <div class="panel-header">
         <span class="panel-title">Select Refrigerant</span>
+        <div id="gallery-filters" class="chart-tabs gallery-filters" role="group" aria-label="Filter refrigerants">
+          <button class="chart-tab active" data-filter="all" aria-pressed="true">All</button>
+          <button class="chart-tab" data-filter="natural" aria-pressed="false">Natural</button>
+          <button class="chart-tab" data-filter="hfo" aria-pressed="false" title="HFOs, HCFOs and HFO blends">HFO</button>
+          <button class="chart-tab" data-filter="hfc" aria-pressed="false" title="HFCs and HFC blends">HFC</button>
+          <button class="chart-tab" data-filter="legacy" aria-pressed="false" title="HCFCs and CFCs (phased out)">Legacy</button>
+          <button class="chart-tab" data-filter="lowgwp" aria-pressed="false" title="GWP (AR5) below 150 — EU F-Gas threshold">GWP &lt; 150</button>
+          <button class="chart-tab" data-filter="a1" aria-pressed="false" title="ASHRAE 34 safety class A1 (lower toxicity, no flame propagation)">A1 only</button>
+        </div>
+        <span id="gallery-count" class="chart-fluid-label"></span>
       </div>
       <div id="ref-cards" class="refrig-grid" role="radiogroup" aria-label="Refrigerant selection"></div>
     </div>
@@ -499,6 +509,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script type="module" src="./assets/js/app.js?v=20260923b"></script>
+  <script type="module" src="./assets/js/app.js?v=20260923c"></script>
 </body>
 </html>

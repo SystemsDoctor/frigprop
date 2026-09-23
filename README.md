@@ -11,6 +11,7 @@ no build step.
 - **Refrigerant gallery** — 28 modern and legacy refrigerants, clustered by
   family (natural → HFO → HFC → HCFC → CFC), with safety class, GWP (AR4/AR5),
   ODP, regulatory status, typical applications, and replacement lineage.
+  Filter chips (All, Natural, HFO, HFC, Legacy, GWP < 150, A1 only).
   Keyboard navigable (arrow keys + Enter).
 - **Property lookup** — full thermodynamic state (T, P, h, s, u, v, ρ, x, cp)
   from any supported input pair: T&P, P&h, P&s, T&quality, P&quality, plus

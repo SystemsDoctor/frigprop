@@ -911,6 +911,14 @@ nav {
   color: var(--accent);
 }
 
+.gallery-filters {
+  flex-wrap: wrap;
+  margin-left: auto;
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
 /* Dome/cycle color key shown when two fluids are compared */
 .chart-legend {
   display: flex;

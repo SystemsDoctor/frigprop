@@ -33,17 +33,46 @@ let _onRefrigerantChange = null;
 const TYPE_RANK = ["natural", "hfo", "hfo-blend", "hcfo", "hfc", "hfc-blend", "hcfc", "cfc"];
 
 /** Group key for clustering (finer than the badge slug: blends split out). */
-function _typeRank(type) {
+function _typeGroup(type) {
   const t = (type || "").toLowerCase();
-  let group;
-  if      (t.includes("natural")) group = "natural";
-  else if (t.includes("hcfo"))    group = "hcfo";
-  else if (t.includes("hfo"))     group = t.includes("blend") ? "hfo-blend" : "hfo";
-  else if (t.includes("hcfc"))    group = "hcfc";
-  else if (t.includes("hfc"))     group = t.includes("blend") ? "hfc-blend" : "hfc";
-  else if (t.includes("cfc"))     group = "cfc";
-  else                            group = "hfc";
-  return TYPE_RANK.indexOf(group);
+  if (t.includes("natural")) return "natural";
+  if (t.includes("hcfo"))    return "hcfo";
+  if (t.includes("hfo"))     return t.includes("blend") ? "hfo-blend" : "hfo";
+  if (t.includes("hcfc"))    return "hcfc";
+  if (t.includes("hfc"))     return t.includes("blend") ? "hfc-blend" : "hfc";
+  if (t.includes("cfc"))     return "cfc";
+  return "hfc";
+}
+
+function _typeRank(type) {
+  return TYPE_RANK.indexOf(_typeGroup(type));
+}
+
+// Gallery filter chips: filter key → card predicate (on card data attributes)
+const GALLERY_FILTERS = {
+  all:     () => true,
+  natural: c => c.dataset.group === "natural",
+  hfo:     c => ["hfo", "hfo-blend", "hcfo"].includes(c.dataset.group),
+  hfc:     c => ["hfc", "hfc-blend"].includes(c.dataset.group),
+  legacy:  c => ["hcfc", "cfc"].includes(c.dataset.group),
+  lowgwp:  c => c.dataset.gwp !== "" && +c.dataset.gwp < 150,
+  a1:      c => c.dataset.safety === "A1",
+};
+
+/** Show only the cards matching a filter chip; keeps a visible card tabbable. */
+function _applyGalleryFilter(filter) {
+  const cards = [...document.querySelectorAll("#ref-cards .ref-card")];
+  cards.forEach(c => c.classList.toggle("hidden", !GALLERY_FILTERS[filter](c)));
+  document.querySelectorAll("#gallery-filters .chart-tab").forEach(b => {
+    const on = b.dataset.filter === filter;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  const visible = cards.filter(c => !c.classList.contains("hidden"));
+  $("gallery-count").textContent = filter === "all" ? "" : `${visible.length} / ${cards.length}`;
+  cards.forEach(c => { c.tabIndex = -1; });
+  const focusable = visible.find(c => c.classList.contains("selected")) || visible[0];
+  if (focusable) focusable.tabIndex = 0;
 }
 
 /** Sort: type cluster, then ASHRAE number, then key (R600 < R600a). */
@@ -71,6 +100,9 @@ export function populateRefrigerantSelector(keys, allInfo) {
     const card = document.createElement("div");
     card.className = "ref-card";
     card.dataset.key = key;
+    card.dataset.group = _typeGroup(typeRaw);
+    card.dataset.gwp = gwp ?? "";
+    card.dataset.safety = safety || "";
     card.setAttribute("role", "radio");
     card.setAttribute("aria-checked", "false");
     card.setAttribute("aria-label", `${info ? info.ashrae_designation : key} — ${_typeLabel(typeRaw)}`);
@@ -101,15 +133,19 @@ export function populateRefrigerantSelector(keys, allInfo) {
   });
 
   _wireGalleryKeyboardNav(grid);
+  document.querySelectorAll("#gallery-filters .chart-tab").forEach(b => {
+    b.addEventListener("click", () => _applyGalleryFilter(b.dataset.filter));
+  });
 }
 
 /** Roving-tabindex arrow-key navigation across the card grid. */
 function _wireGalleryKeyboardNav(grid) {
-  const cards = [...grid.querySelectorAll(".ref-card")];
-  if (cards.length) cards[0].tabIndex = 0;
+  const first = grid.querySelector(".ref-card");
+  if (first) first.tabIndex = 0;
   grid.addEventListener("keydown", e => {
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
     if (!step) return;
+    const cards = [...grid.querySelectorAll(".ref-card:not(.hidden)")];  // filtered view
     const i = cards.indexOf(document.activeElement);
     if (i === -1) return;
     e.preventDefault();

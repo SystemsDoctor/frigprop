@@ -33,7 +33,8 @@ specific displacement, Carnot COPs, second-law efficiency) from
 Diagrams carry faint isobars (T-s) / isotherms (P-h) at display-unit round
 values (`isoLines()` in `cycle.js`, labels kept in view by a Chart.js
 plugin), and a click on the plot fills and runs Property Lookup (P-h: PH;
-T-s: `lookupFromTS()` → TQ or TP with P solved by bisection).
+T-s: `lookupFromTS()` → TQ or TP with P solved by bisection). The gallery
+has filter chips (family partition + GWP < 150 + A1 only).
 
 ## Design principle — two tiers
 
@@ -67,9 +68,6 @@ Each advanced calculation ships with CoolProp-truth cases in
 
 ## Basic improvements (main face)
 
-B5. **Refrigerant gallery filter bar** — toggle chips above the gallery
-    (All | Natural | HFO | HFC | Low-GWP | A1-only); pure DOM filter on
-    existing card data.
 B6. **Saturation table export** — button in the Properties pane that copies
     the saturation line (T, P_sat, h_f, h_g, s_f, s_g, ρ_f, ρ_g) as CSV
     from `getSatRows`.
@@ -98,7 +96,7 @@ A9. **Two-stage / cascade cycle builder** — intercooler pressure
     `cycle.js` rework. Last because it depends on A8-style multi-state
     rendering.
 
-Suggested order: B5–B6 →
+Suggested order: B6 →
 A4–A6 → A7 → B7 → A8 → A9.
 
 ## Working notes for contributors
